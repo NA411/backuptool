@@ -19,6 +19,6 @@ namespace BackupTool.Entities
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation property - files that reference this content
-        public virtual ICollection<SnapshotFile> SnapshotFiles { get; set; } = new List<SnapshotFile>();
+        public virtual ICollection<SnapshotFile> SnapshotFiles { get; set; } = [];
     }
 }
