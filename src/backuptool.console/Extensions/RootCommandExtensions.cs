@@ -35,6 +35,8 @@ namespace BackupTool.Extensions
 
         private static async Task HandlePruneCommand(int snapshotId, IBackupService backupService)
         {
+            if (backupService is null)
+                return;
             Console.WriteLine($"Pruning snapshot {snapshotId}...");
             await backupService.PruneSnapshotAsync(snapshotId);
             Console.WriteLine("Prune completed successfully.");

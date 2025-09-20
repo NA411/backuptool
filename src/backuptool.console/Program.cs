@@ -2,10 +2,7 @@
 using BackupTool.Extensions;
 using BackupTool.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using System.CommandLine;
-using System.CommandLine.Parsing;
-using System.IO;
 
 
 namespace BackupTool
@@ -17,21 +14,8 @@ namespace BackupTool
             // Setup Command Line Functions
             RootCommand rootCommand = new("Console based file backup tool.");
 
-            Option<bool> verboseOption = new("--verbose", "-v")
-            {
-                Description = "Enables logging output to console.",
-                Required = false,
-            };
-            rootCommand.Add(verboseOption);
-
-            rootCommand.SetupSnapshotCommand(null!);
-            rootCommand.SetupRestoreCommand(null!);
-            rootCommand.SetupListCommand(null!);
-            rootCommand.SetupPruneCommand(null!);
-            rootCommand.SetupCheckCommand(null!);
-
             var parseResult = rootCommand.Parse(args);
-            bool isVerbose = parseResult.GetValue(verboseOption);
+            const bool isVerbose = false;
 
             // Setup DI Container
             var services = new ServiceCollection()
