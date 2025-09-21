@@ -13,7 +13,10 @@ namespace BackupTool
         {
             // Setup Command Line Functions
             RootCommand rootCommand = new("Console based file backup tool.");
-            const bool isVerbose = false;
+            bool isVerbose = false;
+            rootCommand.SetupVerboseOption();
+            if (args.Contains("--verbose") || args.Contains("-v")) // hacky way to get verbose option before DI setup
+                isVerbose = true;
 
             // Setup DI Container
             var services = new ServiceCollection()
@@ -35,7 +38,14 @@ namespace BackupTool
             rootCommand.SetupPruneCommand(backupService);
             rootCommand.SetupCheckCommand(backupService);
 
-            rootCommand.Parse(args).Invoke();
+            try
+            {
+                rootCommand.Parse(args).Invoke();
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error: {ex.Message}");
+            }
 
             return;
         }

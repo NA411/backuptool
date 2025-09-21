@@ -6,6 +6,16 @@ namespace BackupTool.Extensions
 {
     internal static class RootCommandExtensions
     {
+        internal static void SetupVerboseOption(this RootCommand rootCommand)
+        {
+            Option<bool> verboseOption = new("--verbose", "-v")
+            {
+                Description = "Outputs logs to console",
+                Required = false,
+                Recursive = true
+            };
+            rootCommand.Options.Add(verboseOption);
+        }
         internal static void SetupCheckCommand(this RootCommand rootCommand, IBackupService backupService)
         {
             Command checkCommand = new("check", "Scans database for corrupted file content.");
@@ -73,11 +83,6 @@ namespace BackupTool.Extensions
         private static async Task HandleListCommand(IBackupService backupService)
         {
             var snapshots = await backupService.GetSnapshotsAsync();
-
-            // Header
-            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE");
-            Console.WriteLine("--------  -------------------  ----- -------------");
-
             long totalSize = 0;
 
             // Build a map of ContentHash to all SnapshotFile instances
@@ -89,7 +94,7 @@ namespace BackupTool.Extensions
                 {
                     if (!contentHashToFiles.TryGetValue(file.ContentHash, out var list))
                     {
-                        list = new List<SnapshotFile>();
+                        list = [];
                         contentHashToFiles[file.ContentHash] = list;
                     }
                     list.Add(file);
@@ -103,19 +108,21 @@ namespace BackupTool.Extensions
 
                 // SIZE: total size of files in this snapshot
                 long snapshotSize = snapshot.Files
-                    .Select(f => f.Content?.Size ?? 0)
-                    .Sum();
+                    .Sum(f => f.Content?.Size ?? 0);
 
                 // DISTINCT_SIZE: sum of sizes of files whose ContentHash only appears in this snapshot
                 long distinctSize = snapshot.Files
                     .Where(f => contentHashToFiles[f.ContentHash].Count == 1)
-                    .Select(f => f.Content?.Size ?? 0)
-                    .Sum();
+                    .Sum(f => f.Content?.Size ?? 0);
 
                 totalSize += snapshotSize;
 
                 Console.WriteLine($"{snapshot.Id,-8}  {snapshot.CreatedAt:yyyy-MM-dd HH:mm:ss}  {snapshotSize,5} {distinctSize,13}");
             }
+
+            // Header
+            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE");
+            Console.WriteLine("--------  -------------------  ----- -------------");
 
             // Summary line
             Console.WriteLine($" total                          {totalSize,5}");
@@ -191,7 +198,6 @@ namespace BackupTool.Extensions
 
         private static async Task HandleSnapshotCommand(DirectoryInfo? directoryInfo, IBackupService backupService)
         {
-
             var targetDirectory = directoryInfo?.FullName;
             if (targetDirectory is not null)
             {
