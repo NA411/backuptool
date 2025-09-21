@@ -1,0 +1,175 @@
+# GitHub Actions workflow for building self-contained executables
+# for a .NET console application (like the backup tool)
+
+name: .NET Console App Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        configuration: [Release]
+        # Build for multiple platforms
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            runtime: win-x64
+            output-name: backuptool.exe
+          - os: ubuntu-latest
+            runtime: linux-x64
+            output-name: backuptool
+          - os: macos-latest
+            runtime: osx-x64
+            output-name: backuptool
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      Solution_Name: BackupTool.sln                    # Replace with your solution name
+      Project_Path: BackupTool/BackupTool.csproj       # Replace with your project path
+      Test_Project_Path: BackupTool.Tests/BackupTool.Tests.csproj  # Replace with test project path
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # Install the .NET Core workload
+    - name: Install .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    # Restore dependencies
+    - name: Restore dependencies
+      run: dotnet restore ${{ env.Solution_Name }}
+
+    # Execute all unit tests in the solution
+    - name: Execute unit tests
+      run: dotnet test ${{ env.Test_Project_Path }} --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
+
+    # Build self-contained executable
+    - name: Build self-contained executable
+      run: |
+        dotnet publish ${{ env.Project_Path }} \
+          --configuration ${{ matrix.configuration }} \
+          --runtime ${{ matrix.runtime }} \
+          --self-contained true \
+          --output ./publish/${{ matrix.runtime }} \
+          -p:PublishSingleFile=true \
+          -p:PublishTrimmed=true \
+          -p:TrimMode=partial \
+          -p:PublishReadyToRun=true
+
+    # Create release directory and copy executable
+    - name: Prepare release artifacts
+      shell: bash
+      run: |
+        mkdir -p ./release
+        cp ./publish/${{ matrix.runtime }}/${{ matrix.output-name }} ./release/
+        
+        # Create a simple README for the release
+        cat > ./release/README.md << 'EOF'
+        # BackupTool - Self-Contained Executable
+        
+        ## Usage
+        
+        ### Create a snapshot
+        ```
+        ./${{ matrix.output-name }} snapshot <directory-path>
+        ```
+        
+        ### List snapshots
+        ```
+        ./${{ matrix.output-name }} list
+        ```
+        
+        ### Restore a snapshot
+        ```
+        ./${{ matrix.output-name }} restore <snapshot-id> <output-directory>
+        ```
+        
+        ### Prune a snapshot
+        ```
+        ./${{ matrix.output-name }} prune <snapshot-id>
+        ```
+        
+        ## System Requirements
+        - Runtime: ${{ matrix.runtime }}
+        - No additional .NET runtime installation required
+        
+        ## Notes
+        - Database file (backup.db) will be created in the same directory as the executable
+        - Log files will be created in a 'logs' subdirectory
+        
+        Built on: $(date)
+        EOF
+
+    # Upload build artifacts
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backuptool-${{ matrix.runtime }}
+        path: ./release/
+        retention-days: 90
+
+  # Create release if this is a tag push
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: ./artifacts
+
+    - name: Create release packages
+      run: |
+        mkdir -p ./release-packages
+        
+        # Create zip packages for each platform
+        cd ./artifacts
+        for dir in */; do
+          platform=${dir%/}
+          cd "$dir"
+          if [[ "$platform" == *"win"* ]]; then
+            zip -r "../../release-packages/backuptool-${platform}.zip" .
+          else
+            tar -czf "../../release-packages/backuptool-${platform}.tar.gz" .
+          fi
+          cd ..
+        done
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ./release-packages/*
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        body: |
+          ## Self-Contained Executables
+          
+          This release contains self-contained executables for multiple platforms.
+          No .NET runtime installation is required.
+          
+          ### Download the appropriate version for your system:
+          - **Windows (x64)**: `backuptool-win-x64.zip`
+          - **Linux (x64)**: `backuptool-linux-x64.tar.gz` 
+          - **macOS (x64)**: `backuptool-osx-x64.tar.gz`
+          
+          ### Installation:
+          1. Download the appropriate package for your platform
+          2. Extract the archive
+          3. Run the executable directly (no installation required)
+          
+          ### Usage:
+          See the README.md file included in each package for detailed usage instructions.
