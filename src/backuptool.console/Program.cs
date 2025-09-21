@@ -13,8 +13,6 @@ namespace BackupTool
         {
             // Setup Command Line Functions
             RootCommand rootCommand = new("Console based file backup tool.");
-
-            var parseResult = rootCommand.Parse(args);
             const bool isVerbose = false;
 
             // Setup DI Container
@@ -37,7 +35,7 @@ namespace BackupTool
             rootCommand.SetupPruneCommand(backupService);
             rootCommand.SetupCheckCommand(backupService);
 
-            parseResult.Invoke();
+            rootCommand.Parse(args).Invoke();
 
             return;
         }
