@@ -245,5 +245,33 @@ namespace BackupTool.Services
                 _logger.LogError(ex, "Failed to prune snapshot {SnapshotId}", snapshotId);
             }
         }
+
+        public async Task<List<SnapshotFile>> CheckForCorruptedContentAsync()
+        {
+            var corruptedFiles = new List<SnapshotFile>();
+            var snapshots = await _unitOfWork.Snapshots.GetAllAsync();
+
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot.Files == null) continue;
+                foreach (var file in snapshot.Files)
+                {
+                    // Check for missing content or mismatched hash
+                    if (file.Content == null || string.IsNullOrEmpty(file.ContentHash))
+                    {
+                        corruptedFiles.Add(file);
+                        continue;
+                    }
+
+                    // Recalculate hash and compare
+                    var data = file.Content.Data;
+                    var actualHash = _hashService.CalculateHash(data);
+                    if (!string.Equals(actualHash, file.ContentHash, StringComparison.OrdinalIgnoreCase))
+                        corruptedFiles.Add(file);
+                }
+            }
+
+            return corruptedFiles;
+        }
     }
 }

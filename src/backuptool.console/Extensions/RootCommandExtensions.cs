@@ -1,4 +1,5 @@
-﻿using BackupTool.Interfaces;
+﻿using BackupTool.Entities;
+using BackupTool.Interfaces;
 using System.CommandLine;
 
 namespace BackupTool.Extensions
@@ -9,10 +10,30 @@ namespace BackupTool.Extensions
         {
             Command checkCommand = new("check", "Scans database for corrupted file content.");
             rootCommand.Subcommands.Add(checkCommand);
-            checkCommand.SetAction(_ => CheckDatabaseForCorruption(backupService));
+            checkCommand.SetAction(_ => HandleCheckCommand(backupService));
         }
 
-        private static void CheckDatabaseForCorruption(IBackupService backupService) => Console.WriteLine($"Checking Database {backupService}");
+        private static async Task HandleCheckCommand(IBackupService backupService)
+        {
+            Console.WriteLine("Scanning database for corrupted file content...");
+
+            var corruptedFiles = await backupService.CheckForCorruptedContentAsync();
+
+            if (corruptedFiles.Count == 0)
+            {
+                Console.WriteLine("No corrupted file content found.");
+            }
+            else
+            {
+                Console.WriteLine("Corrupted file content detected:");
+                Console.WriteLine("SnapshotId  FileName                RelativePath");
+                Console.WriteLine("----------  ----------------------  --------------------------");
+                foreach (var file in corruptedFiles)
+                {
+                    Console.WriteLine($"{file.SnapshotId,-10}  {file.FileName,-22}  {file.RelativePath}");
+                }
+            }
+        }
 
         internal static void SetupPruneCommand(this RootCommand rootCommand, IBackupService backupService)
         {
@@ -53,11 +74,51 @@ namespace BackupTool.Extensions
         {
             var snapshots = await backupService.GetSnapshotsAsync();
 
-            Console.WriteLine("SNAPSHOT  TIMESTAMP");
-            Console.WriteLine("--------  ---------");
+            // Header
+            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE");
+            Console.WriteLine("--------  -------------------  ----- -------------");
 
+            long totalSize = 0;
+
+            // Build a map of ContentHash to all SnapshotFile instances
+            var contentHashToFiles = new Dictionary<string, List<SnapshotFile>>();
             foreach (var snapshot in snapshots)
-                Console.WriteLine($"{snapshot.Id,-8}  {snapshot.CreatedAt:yyyy-MM-dd HH:mm:ss}");
+            {
+                if (snapshot.Files == null) continue;
+                foreach (var file in snapshot.Files)
+                {
+                    if (!contentHashToFiles.TryGetValue(file.ContentHash, out var list))
+                    {
+                        list = new List<SnapshotFile>();
+                        contentHashToFiles[file.ContentHash] = list;
+                    }
+                    list.Add(file);
+                }
+            }
+
+            // Print info for each snapshot
+            foreach (var snapshot in snapshots)
+            {
+                if (snapshot.Files == null) continue;
+
+                // SIZE: total size of files in this snapshot
+                long snapshotSize = snapshot.Files
+                    .Select(f => f.Content?.Size ?? 0)
+                    .Sum();
+
+                // DISTINCT_SIZE: sum of sizes of files whose ContentHash only appears in this snapshot
+                long distinctSize = snapshot.Files
+                    .Where(f => contentHashToFiles[f.ContentHash].Count == 1)
+                    .Select(f => f.Content?.Size ?? 0)
+                    .Sum();
+
+                totalSize += snapshotSize;
+
+                Console.WriteLine($"{snapshot.Id,-8}  {snapshot.CreatedAt:yyyy-MM-dd HH:mm:ss}  {snapshotSize,5} {distinctSize,13}");
+            }
+
+            // Summary line
+            Console.WriteLine($" total                          {totalSize,5}");
         }
 
         internal static void SetupRestoreCommand(this RootCommand rootCommand, IBackupService backupService)
