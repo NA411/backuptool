@@ -55,7 +55,21 @@ jobs:
       run: dotnet test ${{ env.Test_Project_Path }} --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
 
     # Build self-contained executable
-    - name: Build self-contained executable
+    - name: Build self-contained executable (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        dotnet publish ${{ env.Project_Path }} `
+          --configuration ${{ matrix.configuration }} `
+          --runtime ${{ matrix.runtime }} `
+          --self-contained true `
+          --output ./publish/${{ matrix.runtime }} `
+          -p:PublishSingleFile=true `
+          -p:PublishTrimmed=true `
+          -p:TrimMode=partial `
+          -p:PublishReadyToRun=true
+
+    - name: Build self-contained executable (Unix)
+      if: matrix.os != 'windows-latest'
       run: |
         dotnet publish ${{ env.Project_Path }} \
           --configuration ${{ matrix.configuration }} \
