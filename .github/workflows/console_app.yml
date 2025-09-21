@@ -137,9 +137,9 @@ jobs:
           platform=${dir%/}
           cd "$dir"
           if [[ "$platform" == *"win"* ]]; then
-            zip -r "../../release-packages/backuptool-${platform}.zip" .
+            zip -r "../../release-packages/${platform}.zip" .
           else
-            tar -czf "../../release-packages/backuptool-${platform}.tar.gz" .
+            tar -czf "../../release-packages/${platform}.tar.gz" .
           fi
           cd ..
         done
