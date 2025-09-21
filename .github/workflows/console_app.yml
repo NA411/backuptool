@@ -33,9 +33,9 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      Solution_Name: BackupTool.sln                    # Replace with your solution name
-      Project_Path: BackupTool/BackupTool.csproj       # Replace with your project path
-      Test_Project_Path: BackupTool.Tests/BackupTool.Tests.csproj  # Replace with test project path
+      Solution_Name: BackupTool.sln
+      Project_Path: src/backuptool.console/backuptool.csproj
+      Test_Project_Path: test/BackupServiceTests/BackupServiceTests.csproj
 
     steps:
     - name: Checkout
