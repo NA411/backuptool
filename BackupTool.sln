@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "backuptool", "src\backuptoo
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Mocks", "Mocks", "{92FDC5CB-D5EB-4402-96E1-B2D97DFB4177}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackupServiceTests", "BackupServiceTests\BackupServiceTests.csproj", "{670D6474-9B2A-4CDE-BF66-84CFA3E22820}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3D3E243D-58CC-99E4-C365-5FAD97A08938}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3D3E243D-58CC-99E4-C365-5FAD97A08938}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3D3E243D-58CC-99E4-C365-5FAD97A08938}.Release|Any CPU.Build.0 = Release|Any CPU
+		{670D6474-9B2A-4CDE-BF66-84CFA3E22820}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{670D6474-9B2A-4CDE-BF66-84CFA3E22820}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{670D6474-9B2A-4CDE-BF66-84CFA3E22820}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{670D6474-9B2A-4CDE-BF66-84CFA3E22820}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -28,6 +34,7 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{3D3E243D-58CC-99E4-C365-5FAD97A08938} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{92FDC5CB-D5EB-4402-96E1-B2D97DFB4177} = {744D178F-B445-48DF-AAA1-D11A7CC52309}
+		{670D6474-9B2A-4CDE-BF66-84CFA3E22820} = {744D178F-B445-48DF-AAA1-D11A7CC52309}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {F74DC674-4B82-4C6C-9A92-5FC4D31F1A6E}
