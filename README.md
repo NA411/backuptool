@@ -27,17 +27,31 @@ BackupTool is a cross-platform, snapshot-based file backup utility written in C#
 ## Build from Code
 ### 1. Clone the Repository
 
-`git clone https://github.com/NA411/backuptool.git`
+```
+git clone https://github.com/NA411/backuptool.git
+```
 
 ### 2. Build the Project
 
-`dotnet build src/backuptool.console`
+```
+dotnet build BackupTool.sln
+```
 
-### 3. Execute the Backup Tool
+### 3. (Optional) Run the Test Suite
+
+To verify your build, you can run the included unit tests:
+
+```
+dotnet test BackupTool.sln
+```
+
+### 4. Execute the Backup Tool
 
 Navigate to the console project directory and run:
 
-`dotnet run --project src/backuptool.console -- [command] [options]`
+```
+dotnet run --project src/backuptool.console [command] [options]
+```
 
 ## Usage Examples
 
@@ -45,19 +59,25 @@ Navigate to the console project directory and run:
 
 Create a backup snapshot of a directory:
 
-`backuptool snapshot --target-directory <target-directory>`
+``` 
+backuptool snapshot --target-directory <target-directory>
+```
 
 ### List Snapshots
 
 List all snapshots and their disk usage:
 
-`backuptool list`
+```
+backuptool list
+```
 
 ### Restore a Snapshot
 
 Restore a snapshot to a target directory:
 
-`backuptool restore --snapshot-number <snapshot-number> --output-directory <output-directory>`
+```
+backuptool restore --snapshot-number <snapshot-number> --output-directory <output-directory>
+```
 
 Target directory must exist and will overwrite existing files.
 
@@ -65,19 +85,25 @@ Target directory must exist and will overwrite existing files.
 
 Remove a snapshot and reclaim space:
 
-`backuptool prune --snapshot <snapshot_number>`
+```
+backuptool prune --snapshot <snapshot_number>
+```
 
 ### Check for Corrupted Content
 
 Scan the database for corrupted or missing file content:
 
-`backuptool check`
+```
+backuptool check
+```
 
 ### Enable Verbose Logging
 
 Add `--verbose` or `-v` to any command for detailed console logs:
 
-`backuptool snapshot --target-directory <target-directory> --verbose`
+```
+backuptool snapshot --target-directory <target-directory> --verbose
+```
 
 ## Command Reference
 
