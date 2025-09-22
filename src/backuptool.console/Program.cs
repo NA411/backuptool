@@ -12,7 +12,18 @@ namespace BackupTool
         static async Task Main(string[] args)
         {
             // Setup Command Line Functions
-            RootCommand rootCommand = new("Console based file backup tool.");
+            const string asciiArt = @"
+██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
+██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     
+██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝       ██║   ██║   ██║██║   ██║██║     
+██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝        ██║   ██║   ██║██║   ██║██║     
+██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║            ██║   ╚██████╔╝╚██████╔╝███████╗
+╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝            ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝
+                                                                                         
+Console based file backup tool with content de-duplication and snapshot management.
+";
+
+            RootCommand rootCommand = new(asciiArt);
             bool isVerbose = false;
             rootCommand.SetupVerboseOption();
             if (args.Contains("--verbose") || args.Contains("-v")) // hacky way to get verbose option before DI setup
@@ -31,7 +42,7 @@ namespace BackupTool
             // Get backup service
             var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
 
-            // Re-setup commands with actual service
+            // Setup commands with service
             rootCommand.SetupSnapshotCommand(backupService);
             rootCommand.SetupRestoreCommand(backupService);
             rootCommand.SetupListCommand(backupService);
