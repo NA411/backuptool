@@ -1,6 +1,7 @@
 ﻿using BackupTool.Entities;
 using BackupTool.Interfaces;
 using System.CommandLine;
+using System.CommandLine.Parsing;
 
 namespace BackupTool.Extensions
 {
@@ -101,6 +102,10 @@ namespace BackupTool.Extensions
                 }
             }
 
+            // Header
+            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE");
+            Console.WriteLine("--------  -------------------  ----- -------------");
+
             // Print info for each snapshot
             foreach (var snapshot in snapshots)
             {
@@ -120,12 +125,7 @@ namespace BackupTool.Extensions
                 Console.WriteLine($"{snapshot.Id,-8}  {snapshot.CreatedAt:yyyy-MM-dd HH:mm:ss}  {snapshotSize,5} {distinctSize,13}");
             }
 
-            // Header
-            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE");
-            Console.WriteLine("--------  -------------------  ----- -------------");
-
-            // Summary line
-            Console.WriteLine($" total                          {totalSize,5}");
+            Console.WriteLine($"total                          {totalSize,5}"); // Summary line
         }
 
         internal static void SetupRestoreCommand(this RootCommand rootCommand, IBackupService backupService)
@@ -140,21 +140,33 @@ namespace BackupTool.Extensions
                 Description = "Path to the directory to restore.",
                 Required = true,
             };
-            restoreDirectoryOption.Validators.Add(ValidateDirectoryExists(restoreDirectoryOption));
+            Option<bool> createDirectoryOption = new("--create-directory")
+            {
+                Description = "Create the output directory if it does not exist.",
+                Required = false
+            };
+
             Command restoreCommand = new("restore", "Restores directory state from a previous snapshot to a new directory.")
             {
                 restoreSnapshotOption,
-                restoreDirectoryOption
+                restoreDirectoryOption,
+                createDirectoryOption
             };
+
+            restoreDirectoryOption.Validators.Add(ValidateDirectoryExists(restoreDirectoryOption, createDirectoryOption));
+
             rootCommand.Subcommands.Add(restoreCommand);
             restoreCommand.SetAction(parseResult => HandleRestoreCommand(
                 parseResult.GetValue(restoreSnapshotOption),
                 parseResult.GetValue(restoreDirectoryOption),
+                parseResult.GetValue(createDirectoryOption),
                 backupService));
         }
 
-        private static async Task HandleRestoreCommand(int snapshotId, DirectoryInfo? directoryInfo, IBackupService backupService)
+        private static async Task HandleRestoreCommand(int snapshotId, DirectoryInfo? directoryInfo, bool createDirectoy, IBackupService backupService)
         {
+            if (createDirectoy)
+                await backupService.CreateOutputDirectoryAsync(directoryInfo?.FullName);
             var outputDirectory = directoryInfo?.FullName;
             if (outputDirectory is not null)
             {
@@ -187,12 +199,14 @@ namespace BackupTool.Extensions
             );
         }
 
-        private static Action<System.CommandLine.Parsing.OptionResult> ValidateDirectoryExists(Option<DirectoryInfo> targetDirectoryOption)
+        private static Action<OptionResult> ValidateDirectoryExists(Option<DirectoryInfo> targetDirectoryOption, Option<bool> createDirectoryOption = null!)
         {
             return result =>
             {
-                if (result?.GetValue(targetDirectoryOption)?.Exists == false)
-                    result.AddError("Directory does not exist");
+                var targetDir = result?.GetValue(targetDirectoryOption);
+                var createDir = createDirectoryOption is not null && (result?.GetValue(createDirectoryOption) ?? false);
+                if (targetDir?.Exists == false && !createDir)
+                    result?.AddError($"Directory: {targetDir?.FullName} does not exist");
             };
         }
 

@@ -82,7 +82,7 @@ Restore a snapshot to a target directory:
 backuptool restore --snapshot-number <snapshot-number> --output-directory <output-directory>
 ```
 
-Target directory must exist and will overwrite existing files.
+Target directory must exist and will overwrite existing files. Restore has an optional command, `--create-directory`, to create the directory for restoration.
 
 ### Prune a Snapshot
 

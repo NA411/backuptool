@@ -13,19 +13,19 @@ namespace BackupTool
         {
             // Setup Command Line Functions
             const string asciiArt = @"
-██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
-██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     
-██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝       ██║   ██║   ██║██║   ██║██║     
-██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝        ██║   ██║   ██║██║   ██║██║     
-██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║            ██║   ╚██████╔╝╚██████╔╝███████╗
-╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝            ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝
+                ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
+                ██╔══██╗██╔══██╗██╔════╝██║ ██╔╝██║   ██║██╔══██╗    ╚══██╔══╝██╔═══██╗██╔═══██╗██║     
+                ██████╔╝███████║██║     █████╔╝ ██║   ██║██████╔╝       ██║   ██║   ██║██║   ██║██║     
+                ██╔══██╗██╔══██║██║     ██╔═██╗ ██║   ██║██╔═══╝        ██║   ██║   ██║██║   ██║██║     
+                ██████╔╝██║  ██║╚██████╗██║  ██╗╚██████╔╝██║            ██║   ╚██████╔╝╚██████╔╝███████╗
+                ╚═════╝ ╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝            ╚═╝    ╚═════╝  ╚═════╝ ╚══════╝
                                                                                          
-Console based file backup tool with content de-duplication and snapshot management.
-";
+                Console based file backup tool with content de-duplication and snapshot management.
+                ";
 
             RootCommand rootCommand = new(asciiArt);
             bool isVerbose = false;
-            rootCommand.SetupVerboseOption();
+
             if (args.Contains("--verbose") || args.Contains("-v")) // hacky way to get verbose option before DI setup
                 isVerbose = true;
 
@@ -43,6 +43,7 @@ Console based file backup tool with content de-duplication and snapshot manageme
             var backupService = scope.ServiceProvider.GetRequiredService<IBackupService>();
 
             // Setup commands with service
+            rootCommand.SetupVerboseOption();
             rootCommand.SetupSnapshotCommand(backupService);
             rootCommand.SetupRestoreCommand(backupService);
             rootCommand.SetupListCommand(backupService);

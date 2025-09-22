@@ -162,8 +162,11 @@ namespace BackupTool.Services
             {
                 var snapshotFiles = await _unitOfWork.SnapshotFiles.GetBySnapshotIdAsync(snapshotId);
 
-                if (snapshotFiles.Count > 0)
-                    _logger.LogError("Snapshot {SnapshotId} not found for restore", snapshotId);
+                if (snapshotFiles.Count == 0)
+                {
+                    _logger.LogError("No files found for Snapshot: {SnapshotId}, stopping", snapshotId);
+                    return;
+                }
 
                 _logger.LogInformation("Restoring {FileCount} files from snapshot {SnapshotId}", snapshotFiles.Count, snapshotId);
 
@@ -178,7 +181,7 @@ namespace BackupTool.Services
                         var outputDir = Path.GetDirectoryName(outputPath);
 
                         if (!string.IsNullOrEmpty(outputDir))
-                            _fileSystemService.CreateDirectory(outputDir);
+                            await _fileSystemService.CreateDirectory(outputDir);
 
                         await _fileSystemService.WriteFileAsync(outputPath, snapshotFile.Content.Data);
                         restoredFiles++;
@@ -272,6 +275,17 @@ namespace BackupTool.Services
             }
 
             return corruptedFiles;
+        }
+
+        public Task CreateOutputDirectoryAsync(string? fullName)
+        {
+            if (string.IsNullOrEmpty(fullName))
+            {
+                _logger.LogError("Output directory name is null or empty");
+                return Task.CompletedTask;
+            }
+            _logger.LogInformation("Creating output directory: {FullName}", fullName);
+            return _fileSystemService.CreateDirectory(fullName);
         }
     }
 }

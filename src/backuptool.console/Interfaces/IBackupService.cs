@@ -9,5 +9,6 @@ namespace BackupTool.Interfaces
         Task RestoreSnapshotAsync(int snapshotId, string outputDirectory);
         Task PruneSnapshotAsync(int snapshotId);
         Task<List<SnapshotFile>> CheckForCorruptedContentAsync();
+        Task CreateOutputDirectoryAsync(string? fullName);
     }
 }

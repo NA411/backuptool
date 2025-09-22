@@ -4,7 +4,7 @@
     {
         Task<byte[]> ReadFileAsync(string filePath);
         Task WriteFileAsync(string filePath, byte[] data);
-        void CreateDirectory(string path);
+        Task CreateDirectory(string path);
         IEnumerable<string> GetFiles(string path, string searchPattern = "*");
         IEnumerable<string> GetDirectories(string path);
         bool FileExists(string path);
