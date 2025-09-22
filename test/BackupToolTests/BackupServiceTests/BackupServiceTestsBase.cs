@@ -13,6 +13,8 @@ namespace BackupServiceTests
         internal Mock<Microsoft.Extensions.Logging.ILogger<BackupService>> _logger = null!;
         internal BackupService _service = null!;
         internal Mock<ISnapshotRepository> _snapshotRepository = null!;
+        internal Mock<IFileContentRepository> _fileContentRepository = null!;
+        internal Mock<ISnapshotFileRepository> _snapshotFileRepository = null!;
 
         [TestInitialize]
         public void Setup()
@@ -22,10 +24,14 @@ namespace BackupServiceTests
             _hashService = new Mock<IHashService>();
             _logger = new Mock<Microsoft.Extensions.Logging.ILogger<BackupService>>();
             _snapshotRepository = new Mock<ISnapshotRepository>();
+            _fileContentRepository = new Mock<IFileContentRepository>();
+            _snapshotFileRepository = new Mock<ISnapshotFileRepository>();
 
             _service = new BackupService(_unitOfWork.Object, _hashService.Object, _fileSystem.Object, _logger.Object);
 
             _unitOfWork.Setup(x => x.Snapshots).Returns(_snapshotRepository.Object);
+            _unitOfWork.Setup(x => x.FileContents).Returns(_fileContentRepository.Object);
+            _unitOfWork.Setup(x => x.SnapshotFiles).Returns(_snapshotFileRepository.Object);
         }
     }
 }

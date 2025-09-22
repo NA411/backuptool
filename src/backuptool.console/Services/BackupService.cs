@@ -16,17 +16,16 @@ namespace BackupTool.Services
         {
             _logger.LogInformation("Starting snapshot creation for directory: {SourceDirectory}", sourceDirectory);
             var stopwatch = Stopwatch.StartNew();
-
-            if (!_fileSystemService.DirectoryExists(sourceDirectory))
-            {
-                _logger.LogError("Source directory not found: {SourceDirectory}", sourceDirectory);
-                return null;
-            }
-
-            await _unitOfWork.BeginTransactionAsync();
-
             try
             {
+                if (!_fileSystemService.DirectoryExists(sourceDirectory))
+                {
+                    _logger.LogError("Source directory not found: {SourceDirectory}", sourceDirectory);
+                    return null;
+                }
+
+                await _unitOfWork.BeginTransactionAsync();
+
                 var snapshot = new Snapshot
                 {
                     SourceDirectory = sourceDirectory,
@@ -69,14 +68,13 @@ namespace BackupTool.Services
                     stats.FileCount++;
                     stats.BytesProcessed += fileSize;
 
-                    if (stats.FileCount++ % 100 == 0)
-                    {
+                    if (stats.FileCount % 100 == 0)
                         _logger.LogInformation("Processed {FileCount} files, {BytesProcessed:N0} bytes", stats.FileCount, stats.BytesProcessed);
-                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to process file: {FilePath}", filePath);
+                    throw;
                 }
             }
 
@@ -251,11 +249,13 @@ namespace BackupTool.Services
         public async Task<List<SnapshotFile>> CheckForCorruptedContentAsync()
         {
             var corruptedFiles = new List<SnapshotFile>();
+
             var snapshots = await _unitOfWork.Snapshots.GetAllAsync();
 
             foreach (var snapshot in snapshots)
             {
-                if (snapshot.Files == null) continue;
+                if (snapshot.Files == null)
+                    continue;
                 foreach (var file in snapshot.Files)
                 {
                     // Check for missing content or mismatched hash
@@ -265,20 +265,26 @@ namespace BackupTool.Services
                         continue;
                     }
 
-                    // Recalculate hash and compare
-                    var data = file.Content.Data;
-                    var actualHash = _hashService.CalculateHash(data);
-                    if (!string.Equals(actualHash, file.ContentHash, StringComparison.OrdinalIgnoreCase))
-                        corruptedFiles.Add(file);
+                    try
+                    {
+                        // Recalculate hash and compare
+                        var data = file.Content.Data;
+                        var actualHash = _hashService.CalculateHash(data);
+                        if (!string.Equals(actualHash, file.ContentHash, StringComparison.OrdinalIgnoreCase))
+                            corruptedFiles.Add(file);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Calculate Hash failed on {data}", file.Content.Data);
+                    }
                 }
             }
-
             return corruptedFiles;
         }
 
         public Task CreateOutputDirectoryAsync(string? fullName)
         {
-            if (string.IsNullOrEmpty(fullName))
+            if (string.IsNullOrWhiteSpace(fullName))
             {
                 _logger.LogError("Output directory name is null or empty");
                 return Task.CompletedTask;
