@@ -35,7 +35,7 @@ jobs:
     env:
       Solution_Name: BackupTool.sln
       Project_Path: src/backuptool.console/backuptool.csproj
-      Test_Project_Path: test/BackupServiceTests/BackupServiceTests.csproj
+      Test_Project_Path: test/\BackupToolTests/BackupToolTests.csproj
 
     steps:
     - name: Checkout
