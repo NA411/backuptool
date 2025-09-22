@@ -4,7 +4,7 @@ using BackupTool.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using System.CommandLine;
 
-
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("BackupToolTests")]
 namespace BackupTool
 {
     static class Program

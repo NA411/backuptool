@@ -1,7 +1,6 @@
 ﻿using BackupTool.Entities;
 using BackupTool.Interfaces;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 using System.Diagnostics;
 
 namespace BackupTool.Services
@@ -56,7 +55,7 @@ namespace BackupTool.Services
             }
         }
 
-        private async Task<SnapshotStats> ProcessDirectoryAsync(string directoryPath, int snapshotId, string relativePath)
+        internal async Task<SnapshotStats> ProcessDirectoryAsync(string directoryPath, int snapshotId, string relativePath)
         {
             _logger.LogDebug("Processing directory: {DirectoryPath} (relative: {RelativePath})", directoryPath, relativePath);
 
@@ -99,7 +98,7 @@ namespace BackupTool.Services
             return stats;
         }
 
-        private async Task<long> ProcessFileAsync(string filePath, int snapshotId, string relativePath)
+        internal async Task<long> ProcessFileAsync(string filePath, int snapshotId, string relativePath)
         {
             _logger.LogTrace("Processing file: {FilePath}", filePath);
 

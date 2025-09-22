@@ -20,15 +20,9 @@ namespace BackupTool.Repositories
         public IFileContentRepository FileContents { get; }
         public ISnapshotFileRepository SnapshotFiles { get; }
 
-        public async Task<int> SaveChangesAsync()
-        {
-            return await _context.SaveChangesAsync();
-        }
+        public async Task<int> SaveChangesAsync() => await _context.SaveChangesAsync();
 
-        public async Task BeginTransactionAsync()
-        {
-            _transaction = await _context.Database.BeginTransactionAsync();
-        }
+        public async Task BeginTransactionAsync() => _transaction = await _context.Database.BeginTransactionAsync();
 
         public async Task CommitTransactionAsync()
         {

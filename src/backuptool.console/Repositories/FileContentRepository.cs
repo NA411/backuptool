@@ -5,14 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BackupTool.Repositories
 {
-    public class FileContentRepository : IFileContentRepository
+    public class FileContentRepository(BackupDbContext context) : IFileContentRepository
     {
-        private readonly BackupDbContext _context;
-
-        public FileContentRepository(BackupDbContext context)
-        {
-            _context = context;
-        }
+        private readonly BackupDbContext _context = context;
 
         public async Task<FileContent> CreateAsync(FileContent content)
         {
@@ -21,22 +16,11 @@ namespace BackupTool.Repositories
             return content;
         }
 
-        public async Task<FileContent?> GetByHashAsync(string hash)
-        {
-            return await _context.FileContents.FindAsync(hash);
-        }
+        public async Task<FileContent?> GetByHashAsync(string hash) => await _context.FileContents.FindAsync(hash);
 
-        public async Task<bool> ExistsAsync(string hash)
-        {
-            return await _context.FileContents.AnyAsync(fc => fc.Hash == hash);
-        }
+        public async Task<bool> ExistsAsync(string hash) => await _context.FileContents.AnyAsync(fc => fc.Hash == hash);
 
-        public async Task<List<FileContent>> GetOrphanedContentAsync()
-        {
-            return await _context.FileContents
-                .Where(fc => !fc.SnapshotFiles.Any())
-                .ToListAsync();
-        }
+        public async Task<List<FileContent>> GetOrphanedContentAsync() => await _context.FileContents.Where(fc => !fc.SnapshotFiles.Any()).ToListAsync();
 
         public async Task DeleteRangeAsync(IEnumerable<FileContent> contents)
         {

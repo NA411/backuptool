@@ -5,14 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BackupTool.Repositories
 {
-    public class SnapshotFileRepository : ISnapshotFileRepository
+    public class SnapshotFileRepository(BackupDbContext context) : ISnapshotFileRepository
     {
-        private readonly BackupDbContext _context;
-
-        public SnapshotFileRepository(BackupDbContext context)
-        {
-            _context = context;
-        }
+        private readonly BackupDbContext _context = context;
 
         public async Task<SnapshotFile> CreateAsync(SnapshotFile snapshotFile)
         {
@@ -21,13 +16,8 @@ namespace BackupTool.Repositories
             return snapshotFile;
         }
 
-        public async Task<List<SnapshotFile>> GetBySnapshotIdAsync(int snapshotId)
-        {
-            return await _context.SnapshotFiles
-                .Include(sf => sf.Content)
-                .Where(sf => sf.SnapshotId == snapshotId)
-                .ToListAsync();
-        }
+        public async Task<List<SnapshotFile>> GetBySnapshotIdAsync(int snapshotId) =>
+            await _context.SnapshotFiles.Include(sf => sf.Content).Where(sf => sf.SnapshotId == snapshotId).ToListAsync();
 
         public async Task DeleteBySnapshotIdAsync(int snapshotId)
         {

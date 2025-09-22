@@ -163,9 +163,9 @@ namespace BackupTool.Extensions
                 backupService));
         }
 
-        private static async Task HandleRestoreCommand(int snapshotId, DirectoryInfo? directoryInfo, bool createDirectoy, IBackupService backupService)
+        private static async Task HandleRestoreCommand(int snapshotId, DirectoryInfo? directoryInfo, bool createDirectory, IBackupService backupService)
         {
-            if (createDirectoy)
+            if (createDirectory)
                 await backupService.CreateOutputDirectoryAsync(directoryInfo?.FullName);
             var outputDirectory = directoryInfo?.FullName;
             if (outputDirectory is not null)

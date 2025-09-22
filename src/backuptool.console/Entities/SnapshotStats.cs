@@ -1,4 +1,4 @@
-﻿namespace BackupTool.Services
+﻿namespace BackupTool.Entities
 {
     internal class SnapshotStats
     {

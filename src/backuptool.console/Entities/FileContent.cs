@@ -11,14 +11,9 @@ namespace BackupTool.Entities
     {
         [Key]
         public string Hash { get; set; } = string.Empty;
-
         public byte[] Data { get; set; } = [];
-
         public long Size { get; set; }
-
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
-        // Navigation property - files that reference this content
-        public virtual ICollection<SnapshotFile> SnapshotFiles { get; set; } = [];
+        public virtual ICollection<SnapshotFile> SnapshotFiles { get; set; } = []; // Navigation property - files that reference this content
     }
 }
