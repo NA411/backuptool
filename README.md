@@ -1,5 +1,8 @@
 # BackupTool
 
+<img width="979" height="469" alt="image" src="https://github.com/user-attachments/assets/6b2e6469-02f4-47bc-9db6-3dd3061aa6e7" />
+
+
 BackupTool is a cross-platform, snapshot-based file backup utility written in C# for .NET 8. It efficiently stores and de-duplicates file content, supports integrity checking, and provides easy restore and pruning operations. The tool is designed for reliability and repeatability, with a focus on clear documentation and simple usage on Unix-like systems. It was built with System.CommandLine providing a robust command-line interface and Entity Framework Core to provide database support.
 
 ## Features
