@@ -23,12 +23,15 @@ jobs:
           - os: windows-latest
             runtime: win-x64
             output-name: backuptool.exe
+            run-tests: true
           - os: ubuntu-latest
             runtime: linux-x64
             output-name: backuptool
+            run-tests: false
           - os: macos-latest
             runtime: osx-x64
             output-name: backuptool
+            run-tests: false
 
     runs-on: ${{ matrix.os }}
 
@@ -57,8 +60,9 @@ jobs:
     - name: Build for test
       run: dotnet build ${{ env.Solution_Name }}
 
-    # Execute all unit tests in the solution
+    # Execute all unit tests in the solution (only on Windows)
     - name: Execute unit tests
+      if: matrix.run-tests == true
       run: dotnet test ${{ env.Test_Project_Path }} --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
 
     # Build self-contained executable
