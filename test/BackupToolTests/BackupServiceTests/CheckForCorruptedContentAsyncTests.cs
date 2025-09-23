@@ -205,7 +205,7 @@ namespace BackupServiceTests
                 var isCorrupted = i % 10 == 0;
                 var hash = $"hash{i}";
                 var file = TestHelpers.CreateTestSnapshotFile(i, 1, hash, $"file{i}.txt", $"file{i}.txt");
-                file.Content.Data = [.. Enumerable.Range(0, i).Select(i => (byte)i)]; // Unique content
+                file.Content.Data = [.. Enumerable.Range(i, i + 10).Select(i => (byte)i)]; // Unique content
                 snapshot.Files.Add(file);
 
                 if (isCorrupted)

@@ -18,7 +18,7 @@ namespace BackupTool.Repositories
 
         public async Task<Snapshot?> GetByIdAsync(int id) => await _context.Snapshots.Include(s => s.Files).ThenInclude(sf => sf.Content).FirstOrDefaultAsync(s => s.Id == id);
 
-        public async Task<List<Snapshot>> GetAllAsync() => await _context.Snapshots.OrderBy(s => s.Id).ToListAsync();
+        public async Task<List<Snapshot>> GetAllAsync() => await _context.Snapshots.Include(s => s.Files).ThenInclude(sf => sf.Content).OrderBy(s => s.Id).ToListAsync();
 
         public async Task DeleteAsync(int id)
         {

@@ -4,7 +4,6 @@ using BackupTool.Repositories;
 using BackupTool.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 using System.Text;
 using BackupToolTests;
@@ -32,15 +31,19 @@ namespace IntegrationTests
             _sourceDirectory = Path.Combine(_testRootDirectory, "Source");
             _restoreDirectory = Path.Combine(_testRootDirectory, "Restore");
 
+            Directory.CreateDirectory(_testRootDirectory);
             Directory.CreateDirectory(_sourceDirectory);
             Directory.CreateDirectory(_restoreDirectory);
 
-            // Setup database
+            // Setup SQLite database instead of in-memory so transactions can be tested
             var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseSqlite($"Data Source=:memory:")
                 .Options;
 
             _context = new BackupDbContext(options);
+
+            // Ensure database is created with proper schema
+            _context.Database.EnsureCreated();
 
             // Setup repositories and services
             var snapshotRepository = new SnapshotRepository(_context);
@@ -612,10 +615,10 @@ namespace IntegrationTests
             // Test that the actual SQLite database works correctly
             // (This simulates the real database usage vs in-memory testing)
 
-            var tempDbPath = Path.Combine(_testRootDirectory, "test_backup.db");
+            var tempDbPath = Path.Combine(_testRootDirectory, "test_backup_operations.db");
 
             var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseSqlite($"Data Source={tempDbPath}")
+                .UseSqlite($"Data Source=:memory:")
                 .Options;
 
             await using var realContext = new BackupDbContext(options);
@@ -815,6 +818,53 @@ namespace IntegrationTests
                 var restoredContent = await File.ReadAllTextAsync(restoredPath);
                 Assert.AreEqual(file.Value, restoredContent, $"Content mismatch for {file.Key}");
             }
+        }
+
+        #endregion
+
+        #region SQLite-Specific Constraint Tests
+
+        [TestMethod]
+        public async Task Integration_WhenDuplicateSnapshotFileConstraint_EnforcesUniqueness()
+        {
+            // Test that SQLite properly enforces the unique constraint on (SnapshotId, RelativePath)
+            // that the in-memory provider ignores
+
+            // Arrange
+            var snapshot = new BackupTool.Entities.Snapshot
+            {
+                SourceDirectory = _sourceDirectory,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            // Create snapshot first
+            _context.Snapshots.Add(snapshot);
+            await _context.SaveChangesAsync();
+
+            var snapshotFile1 = new BackupTool.Entities.SnapshotFile
+            {
+                SnapshotId = snapshot.Id,
+                ContentHash = "hash1",
+                RelativePath = "duplicate.txt",
+                FileName = "duplicate.txt"
+            };
+
+            var snapshotFile2 = new BackupTool.Entities.SnapshotFile
+            {
+                SnapshotId = snapshot.Id,
+                ContentHash = "hash2",
+                RelativePath = "duplicate.txt", // Same relative path - should violate constraint
+                FileName = "duplicate.txt"
+            };
+
+            // Act & Assert
+            _context.SnapshotFiles.Add(snapshotFile1);
+            await _context.SaveChangesAsync(); // First one should succeed
+
+            _context.SnapshotFiles.Add(snapshotFile2);
+
+            // This should throw due to unique constraint violation
+            await Assert.ThrowsExceptionAsync<DbUpdateException>(() => _context.SaveChangesAsync());
         }
 
         #endregion

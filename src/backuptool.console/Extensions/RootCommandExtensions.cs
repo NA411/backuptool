@@ -54,6 +54,8 @@ namespace BackupTool.Extensions
                 Required = true,
             };
 
+            pruneSnapshotOption.Validators.Add(ValidateSnapshotExists(backupService, pruneSnapshotOption));
+
             Command pruneCommand = new("prune", "Remove Snapshot from database.")
             {
                 pruneSnapshotOption
@@ -65,10 +67,22 @@ namespace BackupTool.Extensions
                 );
         }
 
+        private static Action<OptionResult> ValidateSnapshotExists(IBackupService backupService, Option<int> snapshotOption)
+        {
+            return result =>
+            {
+                int snapshot = result.GetValue(snapshotOption);
+                var snapshots = backupService.GetSnapshotsAsync().Result;
+                if (snapshots.Count(s => s.Id == snapshot) != 1)
+                    result.AddError($"Snapshot: {snapshot} does not exist");
+            };
+        }
+
         private static async Task HandlePruneCommand(int snapshotId, IBackupService backupService)
         {
             if (backupService is null)
                 return;
+
             Console.WriteLine($"Pruning snapshot {snapshotId}...");
             await backupService.PruneSnapshotAsync(snapshotId);
             Console.WriteLine("Prune completed successfully.");
@@ -90,7 +104,9 @@ namespace BackupTool.Extensions
             var contentHashToFiles = new Dictionary<string, List<SnapshotFile>>();
             foreach (var snapshot in snapshots)
             {
-                if (snapshot.Files == null) continue;
+                if (snapshot.Files == null)
+                    continue;
+
                 foreach (var file in snapshot.Files)
                 {
                     if (!contentHashToFiles.TryGetValue(file.ContentHash, out var list))
@@ -109,7 +125,8 @@ namespace BackupTool.Extensions
             // Print info for each snapshot
             foreach (var snapshot in snapshots)
             {
-                if (snapshot.Files == null) continue;
+                if (snapshot.Files == null)
+                    continue;
 
                 // SIZE: total size of files in this snapshot
                 long snapshotSize = snapshot.Files
@@ -154,6 +171,7 @@ namespace BackupTool.Extensions
             };
 
             restoreDirectoryOption.Validators.Add(ValidateDirectoryExists(restoreDirectoryOption, createDirectoryOption));
+            restoreDirectoryOption.Validators.Add(ValidateSnapshotExists(backupService, restoreSnapshotOption));
 
             rootCommand.Subcommands.Add(restoreCommand);
             restoreCommand.SetAction(parseResult => HandleRestoreCommand(

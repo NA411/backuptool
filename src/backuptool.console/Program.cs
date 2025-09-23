@@ -9,7 +9,7 @@ namespace BackupTool
 {
     static class Program
     {
-        static async Task Main(string[] args)
+        static async Task<int> Main(string[] args)
         {
             // Setup Command Line Functions
             const string asciiArt = @"
@@ -52,14 +52,13 @@ namespace BackupTool
 
             try
             {
-                rootCommand.Parse(args).Invoke();
+                return rootCommand.Parse(args).Invoke();
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"Error: {ex.Message}");
+                return 1; // Return error exit code
             }
-
-            return;
         }
     }
 }

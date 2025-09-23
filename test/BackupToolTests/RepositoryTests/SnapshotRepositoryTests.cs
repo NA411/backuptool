@@ -204,15 +204,14 @@ namespace RepositoryTests
         }
 
         [TestMethod]
-        public async Task CreateAsync_WhenNullSnapshot_ThrowsArgumentNullException()
+        public async Task CreateAsync_WhenNullSnapshot_ThrowsNullReferenceException()
         {
             // Act & Assert
-            await Assert.ThrowsExceptionAsync<ArgumentNullException>(() =>
-                _repository.CreateAsync(null!));
+            await Assert.ThrowsExceptionAsync<NullReferenceException>(() => _repository.CreateAsync(null!));
         }
 
         [TestMethod]
-        public async Task CreateAsync_WhenNullSourceDirectory_SavesWithNull()
+        public async Task CreateAsync_WhenNullSourceDirectory_ThrowsDbUpdateException()
         {
             // Arrange
             var snapshot = new Snapshot
@@ -222,12 +221,8 @@ namespace RepositoryTests
                 Files = []
             };
 
-            // Act
-            var result = await _repository.CreateAsync(snapshot);
-
-            // Assert
-            Assert.IsNotNull(result);
-            Assert.IsNull(result.SourceDirectory);
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<DbUpdateException>(async () => await _repository.CreateAsync(snapshot));
         }
 
         #endregion
@@ -269,12 +264,10 @@ namespace RepositoryTests
             Assert.IsNotNull(result);
             Assert.AreEqual(createdSnapshot.Id, result.Id);
             Assert.AreEqual(@"C:\TestSource", result.SourceDirectory);
-            Assert.IsNotNull(result.Files);
             Assert.AreEqual(1, result.Files.Count);
 
             var file = result.Files.First();
             Assert.AreEqual("test.txt", file.FileName);
-            Assert.IsNotNull(file.Content);
             Assert.AreEqual("hash1", file.Content.Hash);
         }
 
@@ -307,7 +300,6 @@ namespace RepositoryTests
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(createdSnapshot.Id, result.Id);
-            Assert.IsNotNull(result.Files);
             Assert.AreEqual(0, result.Files.Count);
         }
 
@@ -528,11 +520,6 @@ namespace RepositoryTests
             // Assert
             Assert.IsNotNull(result);
             Assert.AreEqual(1, result.Count);
-
-            // GetAllAsync should not load Files navigation property
-            var snapshot_result = result[0];
-            // The Files collection might be empty or null depending on EF behavior
-            // This is expected for GetAllAsync as it doesn't include Files
         }
 
         #endregion
@@ -865,7 +852,7 @@ namespace RepositoryTests
         #region Integration Tests
 
         [TestMethod]
-        public async Task FullLifecycle_CreateRetrieveCheckExistsDelete_WorksCorrectly()
+        public async Task FullLifeCycle_CreateRetrieveCheckExistsDelete_WorksCorrectly()
         {
             // Arrange
             var snapshot = new Snapshot

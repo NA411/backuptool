@@ -104,8 +104,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreNotEqual(0, result.ExitCode, "Should fail when directory doesn't exist");
-            Assert.IsTrue(result.Error.Contains("does not exist") || result.Output.Contains("does not exist"),
-                "Error message about non-existent directory not found");
+            Assert.IsTrue(result.Error.Contains("does not exist") || result.Output.Contains("does not exist"), "Error message about non-existent directory not found");
         }
 
         [TestMethod]
@@ -116,8 +115,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreNotEqual(0, result.ExitCode, "Should fail when required argument is missing");
-            Assert.IsTrue(result.Error.Contains("target-directory") || result.Output.Contains("target-directory"),
-                "Help message about required argument not found");
+            Assert.IsTrue(result.Error.Contains("target-directory") || result.Output.Contains("target-directory"),"Help message about required argument not found");
         }
 
         #endregion
@@ -150,7 +148,7 @@ namespace ConsoleUITests
             Assert.AreEqual(0, result.ExitCode, "List command failed");
             Assert.IsTrue(result.Output.Contains("SNAPSHOT") && result.Output.Contains("TIMESTAMP"),
                 "List header not found");
-            Assert.IsTrue(result.Output.Contains("1"), "Snapshot ID not found in list");
+            Assert.IsTrue(result.Output.Contains('1'), "Snapshot ID not found in list");
             Assert.IsTrue(result.Output.Contains("total"), "Total summary not found");
         }
 
@@ -170,8 +168,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, "List command failed");
-            Assert.IsTrue(result.Output.Contains("1") && result.Output.Contains("2"),
-                "Both snapshot IDs not found in list");
+            Assert.IsTrue(result.Output.Contains('1') && result.Output.Contains('2'), "Both snapshot IDs not found in list");
         }
 
         #endregion
@@ -227,8 +224,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreNotEqual(0, result.ExitCode, "Should fail when snapshot doesn't exist");
-            Assert.IsTrue(result.Error.Contains("No files found") || result.Output.Contains("No files found"),
-                "Error message about non-existent snapshot not found");
+            Assert.IsTrue(result.Error.Contains("Snapshot: 999 does not exist") || result.Output.Contains("Snapshot: 999 does not exist"), "Error message about non-existent snapshot not found");
         }
 
         [TestMethod]
@@ -244,8 +240,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreNotEqual(0, result.ExitCode, "Should fail when output directory doesn't exist");
-            Assert.IsTrue(result.Error.Contains("does not exist") || result.Output.Contains("does not exist"),
-                "Error message about non-existent output directory not found");
+            Assert.IsTrue(result.Error.Contains("does not exist") || result.Output.Contains("does not exist"), "Error message about non-existent output directory not found");
         }
 
         #endregion
@@ -261,7 +256,7 @@ namespace ConsoleUITests
 
             // Verify snapshot exists
             var listBefore = await RunBackupToolAsync("list");
-            Assert.IsTrue(listBefore.Output.Contains("1"), "Setup snapshot not found");
+            Assert.IsTrue(listBefore.Output.Contains('1'), "Setup snapshot not found");
 
             // Act
             var result = await RunBackupToolAsync("prune --snapshot 1");
@@ -305,7 +300,7 @@ namespace ConsoleUITests
 
             var listAfter = await RunBackupToolAsync("list");
             Assert.IsFalse(listAfter.Output.Contains("1       "), "Snapshot 1 still exists");
-            Assert.IsTrue(listAfter.Output.Contains("2"), "Snapshot 2 was incorrectly removed");
+            Assert.IsTrue(listAfter.Output.Contains('2'), "Snapshot 2 was incorrectly removed");
         }
 
         #endregion
@@ -324,8 +319,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, $"Check command failed. Output: {result.Output}, Error: {result.Error}");
-            Assert.IsTrue(result.Output.Contains("No corrupted file content found"),
-                "No corruption message not found");
+            Assert.IsTrue(result.Output.Contains("No corrupted file content found"), "No corrupted file content found.");
         }
 
         [TestMethod]
@@ -336,8 +330,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, "Check command should succeed with no snapshots");
-            Assert.IsTrue(result.Output.Contains("No corrupted file content found"),
-                "No corruption message not found");
+            Assert.IsTrue(result.Output.Contains("No corrupted file content found"), "No corrupted file content found.");
         }
 
         #endregion
@@ -396,13 +389,12 @@ namespace ConsoleUITests
             // 1. Create snapshot
             var snapshotResult = await RunBackupToolAsync($"snapshot --target-directory \"{_sourceDirectory}\" --verbose");
             Assert.AreEqual(0, snapshotResult.ExitCode, "Snapshot creation failed");
-            Assert.IsTrue(snapshotResult.Output.Contains("Snapshot") && snapshotResult.Output.Contains("created"),
-                "Snapshot creation message not found");
+            Assert.IsTrue(snapshotResult.Output.Contains("Snapshot") && snapshotResult.Output.Contains("created"), "Snapshot creation message not found");
 
             // 2. List snapshots
             var listResult = await RunBackupToolAsync("list");
             Assert.AreEqual(0, listResult.ExitCode, "List command failed");
-            Assert.IsTrue(listResult.Output.Contains("1"), "Snapshot not found in list");
+            Assert.IsTrue(listResult.Output.Contains('1'), "Snapshot not found in list");
 
             // 3. Check for corruption
             var checkResult = await RunBackupToolAsync("check");
@@ -427,8 +419,7 @@ namespace ConsoleUITests
             // 7. List both snapshots
             var list2Result = await RunBackupToolAsync("list");
             Assert.AreEqual(0, list2Result.ExitCode, "Second list command failed");
-            Assert.IsTrue(list2Result.Output.Contains("1") && list2Result.Output.Contains("2"),
-                "Both snapshots not found in list");
+            Assert.IsTrue(list2Result.Output.Contains('1') && list2Result.Output.Contains('2'), "Both snapshots not found in list");
 
             // 8. Prune first snapshot
             var pruneResult = await RunBackupToolAsync("prune --snapshot 1");
@@ -438,7 +429,7 @@ namespace ConsoleUITests
             // 9. Verify only second snapshot remains
             var finalListResult = await RunBackupToolAsync("list");
             Assert.AreEqual(0, finalListResult.ExitCode, "Final list command failed");
-            Assert.IsTrue(finalListResult.Output.Contains("2"), "Second snapshot not found after prune");
+            Assert.IsTrue(finalListResult.Output.Contains('2'), "Second snapshot not found after prune");
             Assert.IsFalse(finalListResult.Output.Contains("1       "), "First snapshot still exists after prune");
 
             // 10. Final check
@@ -453,6 +444,7 @@ namespace ConsoleUITests
 
         private async Task CreateTestFiles()
         {
+            var jsonSerializerOptions = new JsonSerializerOptions { WriteIndented = true };
             // Create various test files
             await File.WriteAllTextAsync(Path.Combine(_sourceDirectory, "test1.txt"), "Test file 1 content");
             await File.WriteAllBytesAsync(Path.Combine(_sourceDirectory, "test2.bin"), [0x01, 0x02, 0x03, 0x04]);
@@ -464,8 +456,7 @@ namespace ConsoleUITests
 
             // Create JSON file
             var jsonContent = new { name = "test", value = 42, items = new[] { "a", "b", "c" } };
-            await File.WriteAllTextAsync(Path.Combine(_sourceDirectory, "config.json"),
-                JsonSerializer.Serialize(jsonContent, new JsonSerializerOptions { WriteIndented = true }));
+            await File.WriteAllTextAsync(Path.Combine(_sourceDirectory, "config.json"), JsonSerializer.Serialize(jsonContent, jsonSerializerOptions));
         }
 
         private async Task<ProcessResult> RunBackupToolAsync(string arguments)

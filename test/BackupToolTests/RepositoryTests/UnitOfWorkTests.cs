@@ -10,23 +10,32 @@ namespace RepositoryTests
     {
         private BackupDbContext _context = null!;
         private UnitOfWork _unitOfWork = null!;
+        private Microsoft.Data.Sqlite.SqliteConnection _connection = null!;
 
         [TestInitialize]
         public void Setup()
         {
+            // Create and keep connection alive for in-memory SQLite
+            var connectionString = "Data Source=:memory:";
+            _connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+            _connection.Open(); // Keep connection open to persist in-memory database
+
             var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+                .UseSqlite(_connection) // Pass the connection directly
                 .Options;
 
             _context = new BackupDbContext(options);
+            _context.Database.EnsureCreated(); // This will now create the tables
             _unitOfWork = new UnitOfWork(_context);
         }
 
         [TestCleanup]
         public void Cleanup()
         {
-            _unitOfWork.Dispose();
-            _context.Dispose();
+            _unitOfWork?.Dispose();
+            _context?.Dispose();
+            _connection?.Close();
+            _connection?.Dispose();
         }
 
         #region Constructor Tests
@@ -54,12 +63,24 @@ namespace RepositoryTests
         public void Constructor_WhenMultipleInstances_CreatesIndependentRepositories()
         {
             // Arrange
-            var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
+            var connection1 = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+            connection1.Open();
+            var options1 = new DbContextOptionsBuilder<BackupDbContext>()
+                .UseSqlite(connection1)
                 .Options;
 
-            using var context1 = new BackupDbContext(options);
-            using var context2 = new BackupDbContext(options);
+            var connection2 = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=:memory:");
+            connection2.Open();
+            var options2 = new DbContextOptionsBuilder<BackupDbContext>()
+                .UseSqlite(connection2)
+                .Options;
+
+            using var context1 = new BackupDbContext(options1);
+            context1.Database.EnsureCreated();
+
+            using var context2 = new BackupDbContext(options2);
+            context2.Database.EnsureCreated();
+
             using var unitOfWork1 = new UnitOfWork(context1);
             using var unitOfWork2 = new UnitOfWork(context2);
 
@@ -67,6 +88,12 @@ namespace RepositoryTests
             Assert.AreNotSame(unitOfWork1.Snapshots, unitOfWork2.Snapshots);
             Assert.AreNotSame(unitOfWork1.FileContents, unitOfWork2.FileContents);
             Assert.AreNotSame(unitOfWork1.SnapshotFiles, unitOfWork2.SnapshotFiles);
+
+            // Cleanup connections
+            connection1.Close();
+            connection1.Dispose();
+            connection2.Close();
+            connection2.Dispose();
         }
 
         #endregion
@@ -616,6 +643,64 @@ namespace RepositoryTests
             Assert.IsNotNull(retrievedSnapshot);
             Assert.AreEqual(1, retrievedSnapshot.Files.Count);
             Assert.AreEqual("sharedContextHash", retrievedSnapshot.Files.First().ContentHash);
+        }
+
+        #endregion
+
+        #region SQLite-Specific Constraint Tests
+
+        [TestMethod]
+        public async Task SQLite_WhenUniqueConstraintViolation_ThrowsException()
+        {
+            // Arrange - Create a snapshot first
+            var snapshot = new Snapshot
+            {
+                SourceDirectory = @"C:\ConstraintTest",
+                CreatedAt = DateTime.UtcNow
+            };
+            await _unitOfWork.Snapshots.CreateAsync(snapshot);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Create first snapshot file
+            var snapshotFile1 = new SnapshotFile
+            {
+                SnapshotId = snapshot.Id,
+                ContentHash = "hash1",
+                RelativePath = "duplicate.txt",
+                FileName = "duplicate.txt"
+            };
+            await _unitOfWork.SnapshotFiles.CreateAsync(snapshotFile1);
+            await _unitOfWork.SaveChangesAsync();
+
+            // Try to create duplicate with same SnapshotId and RelativePath
+            var snapshotFile2 = new SnapshotFile
+            {
+                SnapshotId = snapshot.Id,
+                ContentHash = "hash2",
+                RelativePath = "duplicate.txt", // Same path - should violate constraint
+                FileName = "duplicate.txt"
+            };
+
+            // Act & Assert
+            await Assert.ThrowsExceptionAsync<DbUpdateException>(() =>
+                _unitOfWork.SnapshotFiles.CreateAsync(snapshotFile2));
+        }
+
+        [TestMethod]
+        public async Task SQLite_WhenForeignKeyConstraintViolation_ThrowsException()
+        {
+            // Arrange - Try to create a SnapshotFile without a valid FileContent
+            var snapshotFile = new SnapshotFile
+            {
+                SnapshotId = 999, // Non-existent snapshot
+                ContentHash = "nonExistentHash",
+                RelativePath = "test.txt",
+                FileName = "test.txt"
+            };
+
+            // Act & Assert - This should fail due to foreign key constraint
+            await Assert.ThrowsExceptionAsync<DbUpdateException>(() =>
+                _unitOfWork.SnapshotFiles.CreateAsync(snapshotFile));
         }
 
         #endregion
