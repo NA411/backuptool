@@ -11,9 +11,10 @@
     <!-- SQLite native library inclusion for self-contained deployments -->
     <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     <PublishSingleFile>true</PublishSingleFile>
-    <!-- Ensure native libraries are not trimmed -->
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>partial</TrimMode>
+    <!-- Disable trimming for Entity Framework Core compatibility -->
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- Suppress trimming warnings since we're disabling it -->
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
 
   <!-- Explicit runtime configurations for SQLite -->
