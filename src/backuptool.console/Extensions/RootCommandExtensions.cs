@@ -5,8 +5,18 @@ using System.CommandLine.Parsing;
 
 namespace BackupTool.Extensions
 {
+    /// <summary>
+    /// Extension methods for configuring the System.CommandLine RootCommand with all backup tool
+    /// commands, options, and their associated handlers. Provides a fluent API for building
+    /// the complete command-line interface with validation and error handling.
+    /// </summary>
     internal static class RootCommandExtensions
     {
+        /// <summary>
+        /// Adds the global --verbose/-v option to the root command, making it available
+        /// to all sub-commands for enabling detailed console logging output.
+        /// </summary>
+        /// <param name="rootCommand">The root command to configure</param>
         internal static void SetupVerboseOption(this RootCommand rootCommand)
         {
             Option<bool> verboseOption = new("--verbose", "-v")
@@ -17,6 +27,13 @@ namespace BackupTool.Extensions
             };
             rootCommand.Options.Add(verboseOption);
         }
+
+        /// <summary>
+        /// Configures the 'check' command for scanning the database to identify corrupted
+        /// or missing file content through hash verification.
+        /// </summary>
+        /// <param name="rootCommand">The root command to add the check sub-command to</param>
+        /// <param name="backupService">The backup service instance for performing integrity checks</param>
         internal static void SetupCheckCommand(this RootCommand rootCommand, IBackupService backupService)
         {
             Command checkCommand = new("check", "Scans database for corrupted file content.");
@@ -24,6 +41,12 @@ namespace BackupTool.Extensions
             checkCommand.SetAction(_ => HandleCheckCommand(backupService));
         }
 
+        /// <summary>
+        /// Handles execution of the check command by performing integrity validation
+        /// on all stored file content and reporting results to the console.
+        /// </summary>
+        /// <param name="backupService">The backup service to use for integrity checking</param>
+        /// <returns>A task representing the asynchronous check operation</returns>
         private static async Task HandleCheckCommand(IBackupService backupService)
         {
             Console.WriteLine("Scanning database for corrupted file content...");
@@ -46,6 +69,13 @@ namespace BackupTool.Extensions
             }
         }
 
+        /// <summary>
+        /// Configures the 'prune' command for removing snapshots and automatically cleaning up
+        /// orphaned content to reclaim storage space.
+        /// </summary>
+        /// <param name="rootCommand">The root command to add the prune sub-command to</param>
+        /// <param name="backupService">The backup service instance for performing prune operations</param>
+        /// <remarks>
         internal static void SetupPruneCommand(this RootCommand rootCommand, IBackupService backupService)
         {
             Option<int> pruneSnapshotOption = new("--snapshot")
@@ -66,7 +96,13 @@ namespace BackupTool.Extensions
                 backupService)
                 );
         }
-
+        /// <summary>
+        /// Creates a validator function that verifies a snapshot exists before allowing
+        /// the command to proceed. Used by commands that reference specific snapshots.
+        /// </summary>
+        /// <param name="backupService">The backup service to use for snapshot validation</param>
+        /// <param name="snapshotOption">The option containing the snapshot ID to validate</param>
+        /// <returns>A validator function that can be added to command options</returns>
         private static Action<OptionResult> ValidateSnapshotExists(IBackupService backupService, Option<int> snapshotOption)
         {
             return result =>
@@ -78,6 +114,13 @@ namespace BackupTool.Extensions
             };
         }
 
+        /// <summary>
+        /// Handles execution of the prune command by removing the specified snapshot
+        /// and cleaning up any orphaned content.
+        /// </summary>
+        /// <param name="snapshotId">The ID of the snapshot to prune</param>
+        /// <param name="backupService">The backup service to use for the prune operation</param>
+        /// <returns>A task representing the asynchronous prune operation</returns>
         private static async Task HandlePruneCommand(int snapshotId, IBackupService backupService)
         {
             if (backupService is null)
@@ -88,6 +131,13 @@ namespace BackupTool.Extensions
             Console.WriteLine("Prune completed successfully.");
         }
 
+        /// <summary>
+        /// Configures the 'list' command for displaying all snapshots with their metadata
+        /// including creation timestamps, file counts, and storage usage statistics.
+        /// </summary>
+        /// <param name="rootCommand">The root command to add the list subcommand to</param>
+        /// <param name="backupService">The backup service instance for retrieving snapshot information</param>
+        /// <remarks>
         internal static void SetupListCommand(this RootCommand rootCommand, IBackupService backupService)
         {
             Command listCommand = new("list", "Lists all snapshots stored in the database.");
@@ -95,10 +145,19 @@ namespace BackupTool.Extensions
             listCommand.SetAction(_ => HandleListCommand(backupService));
         }
 
+        /// <summary>
+        /// Handles execution of the list command by retrieving all snapshots and displaying
+        /// them in a formatted table with storage statistics and deduplication information.
+        /// </summary>
+        /// <param name="backupService">The backup service to use for retrieving snapshots</param>
+        /// <returns>A task representing the asynchronous list operation</returns>
         private static async Task HandleListCommand(IBackupService backupService)
         {
             var snapshots = await backupService.GetSnapshotsAsync();
             long totalSize = 0;
+
+            // Get all existing snapshot IDs for pruning detection
+            var existingSnapshotIds = snapshots.Select(s => s.Id).ToHashSet();
 
             var contentHashToFiles = new Dictionary<string, List<SnapshotFile>>(); // Build a map of ContentHash to all SnapshotFile instances
             foreach (var snapshot in snapshots)
@@ -117,7 +176,11 @@ namespace BackupTool.Extensions
                 }
             }
 
-            var contentHashToSnapshot = contentHashToFiles.ToDictionary(h => h.Key, h => h.Value.OrderBy(f => f.SnapshotId).Select(s => s.SnapshotId).FirstOrDefault());
+            // For each content hash, find the earliest existing snapshot that uses it and only consider existing snapshots
+            var contentHashToSnapshot = contentHashToFiles.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Where(f => existingSnapshotIds.Contains(f.SnapshotId)).OrderBy(f => f.SnapshotId).Select(f => f.SnapshotId).FirstOrDefault()
+            );
 
             Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE  DIRECTORY");
             Console.WriteLine("--------  -------------------  ----- -------------  ---------");
@@ -128,7 +191,11 @@ namespace BackupTool.Extensions
                     continue;
 
                 long snapshotSize = snapshot.Files.Sum(f => f.Content?.Size ?? 0); // SIZE: total size of files in this snapshot
-                var distinctSize = contentHashToFiles.Where(h => contentHashToSnapshot.Where(h => h.Value == snapshot.Id).Select(s => s.Key).Contains(h.Key)).SelectMany(f => f.Value).DistinctBy(f => f.ContentHash).Sum(f => f.Content?.Size);
+
+                // DISTINCT_SIZE: size of content that this snapshot "owns" (first non-pruned snapshot to use each piece of content)
+                var distinctSize = snapshot.Files
+                    .Where(f => contentHashToSnapshot.TryGetValue(f.ContentHash, out var ownerSnapshotId) && ownerSnapshotId == snapshot.Id)
+                    .Sum(f => f.Content?.Size ?? 0);
 
                 totalSize += snapshotSize;
 
@@ -140,6 +207,12 @@ namespace BackupTool.Extensions
             Console.WriteLine($"total                          {totalSize,5}"); // Summary line
         }
 
+        /// <summary>
+        /// Extracts the last folder name from a full directory path for cleaner display
+        /// in the list command output. Handles edge cases like root directories.
+        /// </summary>
+        /// <param name="path">The full directory path to process</param>
+        /// <returns>The last folder name, or the original path if extraction fails</returns>
         private static string GetLastFolderName(string path)
         {
             if (string.IsNullOrEmpty(path))
@@ -155,6 +228,12 @@ namespace BackupTool.Extensions
             return string.IsNullOrEmpty(lastPart) ? path : lastPart; // If GetFileName returns empty (e.g., for root drives like "C:\"), return the original path
         }
 
+        /// <summary>
+        /// Configures the 'restore' command for recreating files from a snapshot to a
+        /// target directory with complete directory structure restoration.
+        /// </summary>
+        /// <param name="rootCommand">The root command to add the restore subcommand to</param>
+        /// <param name="backupService">The backup service instance for performing restore operations</param>
         internal static void SetupRestoreCommand(this RootCommand rootCommand, IBackupService backupService)
         {
             Option<int> restoreSnapshotOption = new("--snapshot-number")
@@ -191,6 +270,15 @@ namespace BackupTool.Extensions
                 backupService));
         }
 
+        /// <summary>
+        /// Handles execution of the restore command by recreating all files from the specified
+        /// snapshot to the target directory with complete directory structure preservation.
+        /// </summary>
+        /// <param name="snapshotId">The ID of the snapshot to restore</param>
+        /// <param name="directoryInfo">Information about the target directory for restoration</param>
+        /// <param name="createDirectory">Whether to create the output directory if it doesn't exist</param>
+        /// <param name="backupService">The backup service to use for the restore operation</param>
+        /// <returns>A task representing the asynchronous restore operation</returns>
         private static async Task HandleRestoreCommand(int snapshotId, DirectoryInfo? directoryInfo, bool createDirectory, IBackupService backupService)
         {
             if (createDirectory)
@@ -209,6 +297,12 @@ namespace BackupTool.Extensions
             }
         }
 
+        /// <summary>
+        /// Configures the 'snapshot' command for creating new backups of directories
+        /// with all subdirectories and files included.
+        /// </summary>
+        /// <param name="rootCommand">The root command to add the snapshot subcommand to</param>
+        /// <param name="backupService">The backup service instance for performing snapshot operations</param>
         internal static void SetupSnapshotCommand(this RootCommand rootCommand, IBackupService backupService)
         {
             Option<DirectoryInfo> targetDirectoryOption = new("--target-directory")
@@ -227,6 +321,13 @@ namespace BackupTool.Extensions
             );
         }
 
+        /// <summary>
+        /// Creates a validator function that verifies a directory exists before allowing
+        /// commands to proceed. Used by commands that operate on specific directories.
+        /// </summary>
+        /// <param name="targetDirectoryOption">The option containing the directory to validate</param>
+        /// <param name="createDirectoryOption">Optional flag indicating if the directory should be created</param>
+        /// <returns>A validator function that can be added to command options</returns>
         private static Action<OptionResult> ValidateDirectoryExists(Option<DirectoryInfo> targetDirectoryOption, Option<bool> createDirectoryOption = null!)
         {
             return result =>
@@ -238,6 +339,13 @@ namespace BackupTool.Extensions
             };
         }
 
+        /// <summary>
+        /// Handles execution of the snapshot command by creating a complete backup of the
+        /// specified directory and all its contents.
+        /// </summary>
+        /// <param name="directoryInfo">Information about the directory to backup</param>
+        /// <param name="backupService">The backup service to use for the snapshot operation</param>
+        /// <returns>A task representing the asynchronous snapshot operation</returns>
         private static async Task HandleSnapshotCommand(DirectoryInfo? directoryInfo, IBackupService backupService)
         {
             var targetDirectory = directoryInfo?.FullName;

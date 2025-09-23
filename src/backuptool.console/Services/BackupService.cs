@@ -1,10 +1,16 @@
-﻿using BackupTool.Entities;
+﻿
+using BackupTool.Entities;
 using BackupTool.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 
 namespace BackupTool.Services
 {
+    /// <summary>
+    /// Core application service that orchestrates all backup operations including snapshot creation,
+    /// restoration, pruning, and integrity checking. Implements content-based de-duplication and
+    /// transactional safety for reliable backup operations.
+    /// </summary>
     public class BackupService(IUnitOfWork unitOfWork, IHashService hashService, IFileSystemService fileSystemService, ILogger<BackupService> logger) : IBackupService
     {
         private readonly IUnitOfWork _unitOfWork = unitOfWork;
@@ -12,6 +18,14 @@ namespace BackupTool.Services
         private readonly IFileSystemService _fileSystemService = fileSystemService;
         private readonly ILogger<BackupService> _logger = logger;
 
+        /// <summary>
+        /// Creates a complete snapshot of the specified directory and all its subdirectories.
+        /// Uses content-based deduplication to store only unique file content and maintains
+        /// transactional integrity throughout the operation.
+        /// </summary>
+        /// <param name="sourceDirectory">The full path to the directory to backup</param>
+        /// <returns>The ID of the created snapshot if successful, null if the operation failed</returns>
+        /// <exception cref="ArgumentException">Thrown when sourceDirectory is null or empty</exception>
         public async Task<int?> CreateSnapshotAsync(string sourceDirectory)
         {
             _logger.LogInformation("Starting snapshot creation for directory: {SourceDirectory}", sourceDirectory);
@@ -54,6 +68,15 @@ namespace BackupTool.Services
             }
         }
 
+        /// <summary>
+        /// Recursively processes a directory and all its contents for snapshot creation.
+        /// Handles both files and subdirectories while building proper relative paths
+        /// for cross-platform restore compatibility.
+        /// </summary>
+        /// <param name="directoryPath">The full path to the directory to process</param>
+        /// <param name="snapshotId">The ID of the snapshot being created</param>
+        /// <param name="relativePath">The relative path from the snapshot root for this directory</param>
+        /// <returns>Statistics containing the number of files processed and total bytes</returns>
         internal async Task<SnapshotStats> ProcessDirectoryAsync(string directoryPath, int snapshotId, string relativePath)
         {
             _logger.LogDebug("Processing directory: {DirectoryPath} (relative: {RelativePath})", directoryPath, relativePath);
@@ -96,6 +119,15 @@ namespace BackupTool.Services
             return stats;
         }
 
+        /// <summary>
+        /// Processes a single file for inclusion in a snapshot, implementing content-based
+        /// deduplication by storing unique content only once based on SHA-256 hash.
+        /// </summary>
+        /// <param name="filePath">The full path to the file to process</param>
+        /// <param name="snapshotId">The ID of the snapshot being created</param>
+        /// <param name="relativePath">The relative path from the snapshot root to the file's directory</param>
+        /// <returns>The size of the file in bytes</returns>
+        /// <exception cref="IOException">Thrown when the file cannot be read</exception>
         internal async Task<long> ProcessFileAsync(string filePath, int snapshotId, string relativePath)
         {
             _logger.LogTrace("Processing file: {FilePath}", filePath);
@@ -134,6 +166,11 @@ namespace BackupTool.Services
             return fileData.Length;
         }
 
+        /// <summary>
+        /// Retrieves all snapshots from the database with their associated file metadata
+        /// and content information loaded for immediate use.
+        /// </summary>
+        /// <returns>A list of all snapshots with complete file and content information</returns>
         public async Task<List<Snapshot>> GetSnapshotsAsync()
         {
             _logger.LogDebug("Retrieving all snapshots");
@@ -150,6 +187,14 @@ namespace BackupTool.Services
             }
         }
 
+        /// <summary>
+        /// Restores all files from a specified snapshot to the given output directory,
+        /// recreating the complete directory structure and file contents exactly as
+        /// they existed when the snapshot was created.
+        /// </summary>
+        /// <param name="snapshotId">The ID of the snapshot to restore</param>
+        /// <param name="outputDirectory">The directory where files should be restored</param>
+        /// <exception cref="DirectoryNotFoundException">Thrown when the output directory cannot be created</exception>
         public async Task RestoreSnapshotAsync(int snapshotId, string outputDirectory)
         {
             _logger.LogInformation("Starting restore of snapshot {SnapshotId} to {OutputDirectory}", snapshotId, outputDirectory);
@@ -205,6 +250,12 @@ namespace BackupTool.Services
             }
         }
 
+        /// <summary>
+        /// Removes a snapshot from the database and automatically cleans up any file content
+        /// that becomes orphaned (no longer referenced by any remaining snapshots).
+        /// This operation is transactional and will rollback completely on any failure.
+        /// </summary>
+        /// <param name="snapshotId">The ID of the snapshot to remove</param>
         public async Task PruneSnapshotAsync(int snapshotId)
         {
             _logger.LogInformation("Starting prune of snapshot {SnapshotId}", snapshotId);
@@ -246,6 +297,12 @@ namespace BackupTool.Services
             }
         }
 
+        /// <summary>
+        /// Validates the integrity of all stored file content by recalculating SHA-256 hashes
+        /// and comparing them with the stored hash values. Identifies files with corrupted
+        /// or missing content that may indicate data integrity issues.
+        /// </summary>
+        /// <returns>A list of SnapshotFile records that have corrupted or missing content</returns>
         public async Task<List<SnapshotFile>> CheckForCorruptedContentAsync()
         {
             var corruptedFiles = new List<SnapshotFile>();
@@ -282,6 +339,11 @@ namespace BackupTool.Services
             return corruptedFiles;
         }
 
+        /// <summary>
+        /// Creates the specified output directory if it doesn't exist. This is a helper method
+        /// used by restore operations to ensure the target directory structure is available.
+        /// </summary>
+        /// <param name="fullName">The full path of the directory to create</param>
         public Task CreateOutputDirectoryAsync(string? fullName)
         {
             if (string.IsNullOrWhiteSpace(fullName))
