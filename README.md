@@ -51,9 +51,9 @@ BackupTool uses a sophisticated storage architecture:
    ./backuptool --help
    ```
 
-The pre-built releases are **self-contained executables** that include the .NET runtime - no additional installation required!
+The pre-built releases are **self-contained executables** that include the .NET runtime and any dependencies - no additional installation required!
 
-### Build from Source
+### Build from Source - See Prerequisites
 
 1. **Clone the Repository**
    ```
