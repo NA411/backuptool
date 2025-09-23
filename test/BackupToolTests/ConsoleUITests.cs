@@ -2,6 +2,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using System.Runtime.InteropServices;
 
 namespace ConsoleUITests
 {
@@ -34,16 +35,7 @@ namespace ConsoleUITests
             var solutionRoot = FindSolutionRoot(currentDirectory);
 
             // Platform-specific executable name
-            string executableName;
-            if (OperatingSystem.IsWindows())
-            {
-                executableName = "backuptool.exe";
-            }
-            else
-            {
-                executableName = "backuptool";
-            }
-
+            string executableName = GetExecutableName();
             _backupToolPath = Path.Combine(solutionRoot, "src", "backuptool.console", "bin", "Debug", "net8.0", executableName);
 
             // If not found, build the project
@@ -51,6 +43,12 @@ namespace ConsoleUITests
                 BuildProject(solutionRoot);
 
             Assert.IsTrue(File.Exists(_backupToolPath), $"Backup tool executable not found at: {_backupToolPath}");
+
+            // On Unix systems, make sure the executable has execute permissions
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                SetExecutablePermissions(_backupToolPath);
+            }
         }
 
         [TestCleanup]
@@ -90,7 +88,7 @@ namespace ConsoleUITests
             // Assert
             Assert.AreEqual(0, result.ExitCode, "Snapshot command with verbose flag failed");
             Assert.IsTrue(result.Output.Contains("Creating snapshot"), "Verbose output not found");
-            Assert.IsTrue(result.Output.Contains("Files:") && result.Output.Contains("Bytes:"),"File and byte statistics not found in verbose output");
+            Assert.IsTrue(result.Output.Contains("Files:") && result.Output.Contains("Bytes:"), "File and byte statistics not found in verbose output");
         }
 
         [TestMethod]
@@ -115,7 +113,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreNotEqual(0, result.ExitCode, "Should fail when required argument is missing");
-            Assert.IsTrue(result.Error.Contains("target-directory") || result.Output.Contains("target-directory"),"Help message about required argument not found");
+            Assert.IsTrue(result.Error.Contains("target-directory") || result.Output.Contains("target-directory"), "Help message about required argument not found");
         }
 
         #endregion
@@ -365,7 +363,7 @@ namespace ConsoleUITests
             var result = await RunBackupToolAsync("--version");
 
             // Assert
-            Assert.IsTrue(result.ExitCode == 0 || result.Output.Contains("version") || result.Error.Contains("version"),"Version information not found");
+            Assert.IsTrue(result.ExitCode == 0 || result.Output.Contains("version") || result.Error.Contains("version"), "Version information not found");
         }
 
         #endregion
@@ -481,7 +479,26 @@ namespace ConsoleUITests
             process.BeginOutputReadLine();
             process.BeginErrorReadLine();
 
-            await process.WaitForExitAsync();
+            // Add timeout to prevent hanging tests
+            var timeoutMs = 30000; // 30 seconds
+            using var cts = new CancellationTokenSource(timeoutMs);
+            try
+            {
+                await process.WaitForExitAsync(cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                try
+                {
+                    process.Kill();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to kill process: {ex.Message}");
+                }
+
+                throw new TimeoutException($"Process timed out after {timeoutMs}ms. Command: {_backupToolPath} {arguments}");
+            }
 
             return new ProcessResult
             {
@@ -512,15 +529,67 @@ namespace ConsoleUITests
                 WorkingDirectory = solutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
+                CreateNoWindow = true
             };
 
             using var process = Process.Start(buildProcess);
-            process?.WaitForExit();
-
-            if (process?.ExitCode != 0)
+            if (process == null)
             {
-                throw new InvalidOperationException("Failed to build the project");
+                throw new InvalidOperationException("Failed to start dotnet build process");
+            }
+
+            process.WaitForExit();
+
+            if (process.ExitCode != 0)
+            {
+                var error = process.StandardError.ReadToEnd();
+                var output = process.StandardOutput.ReadToEnd();
+                throw new InvalidOperationException($"Failed to build the project. Exit code: {process.ExitCode}. Output: {output}. Error: {error}");
+            }
+        }
+
+        private static string GetExecutableName()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return "backuptool.exe";
+            }
+            else
+            {
+                return "backuptool";
+            }
+        }
+
+        private static void SetExecutablePermissions(string filePath)
+        {
+            try
+            {
+                // Use chmod to set execute permissions on Unix systems
+                var chmodProcess = new ProcessStartInfo
+                {
+                    FileName = "chmod",
+                    Arguments = $"+x \"{filePath}\"",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var process = Process.Start(chmodProcess);
+                if (process != null)
+                {
+                    process.WaitForExit();
+                    if (process.ExitCode != 0)
+                    {
+                        var error = process.StandardError.ReadToEnd();
+                        Console.WriteLine($"Warning: Failed to set execute permissions on {filePath}: {error}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Warning: Failed to set execute permissions on {filePath}: {ex.Message}");
             }
         }
 
