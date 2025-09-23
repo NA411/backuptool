@@ -26,13 +26,12 @@ namespace BackupTool
             RootCommand rootCommand = new(asciiArt);
             bool isVerbose = false;
 
-            if (args.Contains("--verbose") || args.Contains("-v")) // hacky way to get verbose option before DI setup
+            // hacky way to get verbose option before DI setup
+            if (args.Contains("--verbose") || args.Contains("-v"))
                 isVerbose = true;
 
             // Setup DI Container
-            var services = new ServiceCollection()
-                .AddBackupServices("Data Source=backup.db", isVerbose)
-                .BuildServiceProvider();
+            var services = new ServiceCollection().AddBackupServices("Data Source=backup.db", isVerbose).BuildServiceProvider();
 
             // Ensure database is created
             using var scope = services.CreateScope();

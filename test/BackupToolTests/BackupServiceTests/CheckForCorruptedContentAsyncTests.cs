@@ -227,9 +227,7 @@ namespace BackupServiceTests
             // Assert
              Assert.AreEqual(100, result.Count); // Every 10th file = 100 corrupted files
             foreach (var corruptedFile in corruptedFiles)
-            {
                 Assert.IsTrue(result.Contains(corruptedFile));
-            }
         }
 
         [TestMethod]

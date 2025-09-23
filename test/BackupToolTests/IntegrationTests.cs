@@ -1,4 +1,6 @@
-﻿using BackupTool.Contexts;
+﻿// Ignore Spelling: Shotting
+
+using BackupTool.Contexts;
 using BackupTool.Services;
 using BackupTool.Repositories;
 using BackupTool.Interfaces;
@@ -440,7 +442,7 @@ namespace IntegrationTests
         #region De-duplication Tests
 
         [TestMethod]
-        public async Task Integration_WhenSnapShotingTwiceWithoutChanges_OnlyStoresMetadata()
+        public async Task Integration_WhenSnapShottingTwiceWithoutChanges_OnlyStoresMetadata()
         {
             // Arrange - Create initial files
             var files = new Dictionary<string, byte[]>

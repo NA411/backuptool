@@ -64,7 +64,6 @@ namespace BackupServiceTests
         {
             // Arrange
             const string sourceDir = @"C:\NonExistentDir";
-
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(false);
 
             // Act
@@ -134,7 +133,6 @@ namespace BackupServiceTests
         {
             // Arrange
             const string sourceDir = @"C:\TestDir";
-
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([]);
             _fileSystem.Setup(x => x.GetDirectories(sourceDir)).Returns([]);
@@ -197,11 +195,8 @@ namespace BackupServiceTests
             const int expectedSnapshotId = 1;
             var files = new List<string>();
 
-            // Create 100 files
-            for (int i = 1; i <= 100; i++)
-            {
+            for (int i = 1; i <= 100; i++) // Create 100 files
                 files.Add($@"C:\TestDir\file{i}.txt");
-            }
 
             var fileData = new byte[] { 1, 2, 3 };
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
@@ -249,10 +244,7 @@ namespace BackupServiceTests
             _fileSystem.Setup(x => x.ReadFileAsync(It.IsAny<string>())).ReturnsAsync(identicalData);
             _hashService.Setup(x => x.CalculateHash(identicalData)).Returns(sharedHash);
 
-            // First file - content doesn't exist, second file - content exists
-            _fileContentRepository.SetupSequence(x => x.ExistsAsync(sharedHash))
-                .ReturnsAsync(false)
-                .ReturnsAsync(true);
+            _fileContentRepository.SetupSequence(x => x.ExistsAsync(sharedHash)).ReturnsAsync(false).ReturnsAsync(true);
 
             _fileContentRepository.Setup(x => x.CreateAsync(It.IsAny<FileContent>())).ReturnsAsync((FileContent fc) => fc);
             _snapshotFileRepository.Setup(x => x.CreateAsync(It.IsAny<SnapshotFile>())).ReturnsAsync((SnapshotFile sf) => sf);
@@ -264,7 +256,7 @@ namespace BackupServiceTests
             // Assert
             Assert.AreEqual(expectedSnapshotId, result);
 
-            // Verify content was created only once (deduplication)
+            // Verify content was created only once (de-duplication)
             _fileContentRepository.Verify(x => x.CreateAsync(It.IsAny<FileContent>()), Times.Once);
 
             // But both snapshot files were created
@@ -311,9 +303,7 @@ namespace BackupServiceTests
                 l => l.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Snapshot {expectedSnapshotId} created successfully") &&
-                                                v.ToString()!.Contains("Files: 1") &&
-                                                v.ToString()!.Contains("Bytes: 5")),
+                    It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains($"Snapshot {expectedSnapshotId} created successfully") && v.ToString()!.Contains("Files: 1") && v.ToString()!.Contains("Bytes: 5")),
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
@@ -356,13 +346,11 @@ namespace BackupServiceTests
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([]);
             _fileSystem.Setup(x => x.GetDirectories(sourceDir)).Returns([]);
-            _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>()))
-                .Callback<Snapshot>(s =>
+            _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>())).Callback<Snapshot>(s =>
                 {
                     capturedSnapshot = s;
                     s.Id = 1;
-                })
-                .ReturnsAsync((Snapshot s) => s);
+                }).ReturnsAsync((Snapshot s) => s);
 
             // Act
             await _service.CreateSnapshotAsync(sourceDir);
@@ -659,13 +647,11 @@ namespace BackupServiceTests
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([]);
             _fileSystem.Setup(x => x.GetDirectories(sourceDir)).Returns([]);
-            _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>()))
-                .Callback<Snapshot>(s =>
+            _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>())).Callback<Snapshot>(s =>
                 {
                     capturedSnapshot = s;
                     s.Id = 1;
-                })
-                .ReturnsAsync((Snapshot s) => s);
+                }).ReturnsAsync((Snapshot s) => s);
 
             // Act
             await _service.CreateSnapshotAsync(sourceDir);

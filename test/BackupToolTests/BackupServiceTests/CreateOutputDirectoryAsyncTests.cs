@@ -453,8 +453,7 @@ namespace BackupServiceTests
                 _logger.Object);
 
             // Act & Assert
-            await Assert.ThrowsExceptionAsync<NullReferenceException>(() =>
-                serviceWithNullFileSystem.CreateOutputDirectoryAsync(@"C:\test"));
+            await Assert.ThrowsExceptionAsync<NullReferenceException>(() => serviceWithNullFileSystem.CreateOutputDirectoryAsync(@"C:\test"));
         }
 
         [TestMethod]
