@@ -36,22 +36,16 @@ namespace IntegrationTests
             Directory.CreateDirectory(_sourceDirectory);
             Directory.CreateDirectory(_restoreDirectory);
 
-            // Create and keep connection alive for in-memory SQLite (same as UnitOfWorkTests)
-            var connectionString = "Data Source=:memory:";
+            const string connectionString = "Data Source=:memory:";
             _connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
             _connection.Open(); // Keep connection open to persist in-memory database
 
-            var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseSqlite(_connection) // Pass the connection directly
-                .Options;
+            var options = new DbContextOptionsBuilder<BackupDbContext>().UseSqlite(_connection).Options;
 
             _context = new BackupDbContext(options);
-            _context.Database.EnsureCreated(); // This will now create the tables
+            _context.Database.EnsureCreated();
 
             // Setup repositories and services
-            var snapshotRepository = new SnapshotRepository(_context);
-            var fileContentRepository = new FileContentRepository(_context);
-            var snapshotFileRepository = new SnapshotFileRepository(_context);
             _unitOfWork = new UnitOfWork(_context);
 
             _hashService = new Sha256HashService();
@@ -70,9 +64,7 @@ namespace IntegrationTests
             _connection?.Dispose();
 
             if (Directory.Exists(_testRootDirectory))
-            {
                 Directory.Delete(_testRootDirectory, true);
-            }
         }
 
         #region All Files Restored Tests
@@ -91,9 +83,7 @@ namespace IntegrationTests
             };
 
             foreach (var file in files)
-            {
                 await File.WriteAllBytesAsync(Path.Combine(_sourceDirectory, file.Key), file.Value);
-            }
 
             // Act - Create snapshot and restore
             var snapshotId = await _backupService.CreateSnapshotAsync(_sourceDirectory);
@@ -162,7 +152,7 @@ namespace IntegrationTests
             var testFiles = new Dictionary<string, byte[]>
             {
                 ["zeros.bin"] = new byte[1000], // All zeros
-                ["ones.bin"] = Enumerable.Repeat((byte)0xFF, 500).ToArray(), // All ones
+                ["ones.bin"] = [.. Enumerable.Repeat((byte)0xFF, 500)], // All ones
                 ["random.bin"] = TestHelpers.GenerateRandomBytes(2048), // Random data
                 ["pattern.bin"] = TestHelpers.GeneratePatternBytes(1024), // Repeating pattern
                 ["unicode.txt"] = Encoding.UTF8.GetBytes("Hello 世界 🌍 Мир"), // Unicode text
@@ -170,9 +160,7 @@ namespace IntegrationTests
             };
 
             foreach (var file in testFiles)
-            {
                 await File.WriteAllBytesAsync(Path.Combine(_sourceDirectory, file.Key), file.Value);
-            }
 
             // Act - Create snapshot and restore
             var snapshotId = await _backupService.CreateSnapshotAsync(_sourceDirectory);
@@ -325,9 +313,7 @@ namespace IntegrationTests
             };
 
             foreach (var file in binaryFiles)
-            {
                 await File.WriteAllBytesAsync(Path.Combine(_sourceDirectory, file.Key), file.Value);
-            }
 
             // Act - Create snapshot and restore
             var snapshotId = await _backupService.CreateSnapshotAsync(_sourceDirectory);
@@ -451,10 +437,10 @@ namespace IntegrationTests
 
         #endregion
 
-        #region Deduplication Tests
+        #region De-duplication Tests
 
         [TestMethod]
-        public async Task Integration_WhenSnapshotingTwiceWithoutChanges_OnlyStoresMetadata()
+        public async Task Integration_WhenSnapShotingTwiceWithoutChanges_OnlyStoresMetadata()
         {
             // Arrange - Create initial files
             var files = new Dictionary<string, byte[]>
@@ -465,9 +451,7 @@ namespace IntegrationTests
             };
 
             foreach (var file in files)
-            {
                 await File.WriteAllBytesAsync(Path.Combine(_sourceDirectory, file.Key), file.Value);
-            }
 
             // Act - Create first snapshot
             var snapshot1Id = await _backupService.CreateSnapshotAsync(_sourceDirectory);
@@ -486,12 +470,10 @@ namespace IntegrationTests
             var finalSnapshotFileCount = await _context.SnapshotFiles.CountAsync();
 
             // Content count should be the same (no duplicate content stored)
-            Assert.AreEqual(initialContentCount, finalContentCount,
-                "Duplicate file content was stored instead of being deduplicated");
+            Assert.AreEqual(initialContentCount, finalContentCount, "Duplicate file content was stored instead of being deduplicated");
 
             // Snapshot file count should double (metadata for each snapshot)
-            Assert.AreEqual(initialSnapshotFileCount * 2, finalSnapshotFileCount,
-                "Snapshot file metadata was not created for second snapshot");
+            Assert.AreEqual(initialSnapshotFileCount * 2, finalSnapshotFileCount,"Snapshot file metadata was not created for second snapshot");
 
             // Verify both snapshots are independently restorable
             var restoreDir1 = Path.Combine(_restoreDirectory, "Snapshot1");
@@ -520,7 +502,7 @@ namespace IntegrationTests
         }
 
         [TestMethod]
-        public async Task Integration_WhenMultipleSnapshotsWithIdenticalFiles_DeduplicatesAcrossSnapshots()
+        public async Task Integration_WhenMultipleSnapshotsWithIdenticalFiles_DeDuplicatesAcrossSnapshots()
         {
             // Arrange - Create identical content in different snapshot sessions
             var sharedContent = Encoding.UTF8.GetBytes("This content appears in multiple snapshots");
@@ -539,12 +521,11 @@ namespace IntegrationTests
             await File.WriteAllBytesAsync(Path.Combine(_sourceDirectory, "unique2.txt"), uniqueContent2);
             var snapshot2Id = await _backupService.CreateSnapshotAsync(_sourceDirectory);
 
-            // Assert - Verify deduplication occurred
+            // Assert - Verify de-duplication occurred
             var sharedHash = _hashService.CalculateHash(sharedContent);
             var contentWithSharedHash = await _context.FileContents.Where(fc => fc.Hash == sharedHash).ToListAsync();
 
-            Assert.AreEqual(1, contentWithSharedHash.Count,
-                "Shared content was not deduplicated across snapshots");
+            Assert.AreEqual(1, contentWithSharedHash.Count, "Shared content was not de-duplicated across snapshots");
 
             // Verify both snapshots reference the same content
             var snapshot1Files = await _context.SnapshotFiles.Where(sf => sf.SnapshotId == snapshot1Id).ToListAsync();
@@ -555,8 +536,7 @@ namespace IntegrationTests
 
             Assert.IsNotNull(snapshot1SharedFile);
             Assert.IsNotNull(snapshot2SharedFile);
-            Assert.AreEqual(snapshot1SharedFile.ContentHash, snapshot2SharedFile.ContentHash,
-                "Shared files do not reference the same content hash");
+            Assert.AreEqual(snapshot1SharedFile.ContentHash, snapshot2SharedFile.ContentHash, "Shared files do not reference the same content hash");
         }
 
         #endregion
@@ -573,10 +553,8 @@ namespace IntegrationTests
             Directory.CreateDirectory(testProjectDirectory);
 
             // Create sample files as described in README examples
-            await File.WriteAllTextAsync(Path.Combine(testProjectDirectory, "document.txt"),
-                "Sample document for testing backup functionality");
-            await File.WriteAllTextAsync(Path.Combine(testProjectDirectory, "config.json"),
-                @"{""database"": ""backup.db"", ""verbose"": true}");
+            await File.WriteAllTextAsync(Path.Combine(testProjectDirectory, "document.txt"), "Sample document for testing backup functionality");
+            await File.WriteAllTextAsync(Path.Combine(testProjectDirectory, "config.json"), @"{""database"": ""backup.db"", ""verbose"": true}");
 
             var subDir = Path.Combine(testProjectDirectory, "data");
             Directory.CreateDirectory(subDir);
@@ -611,9 +589,6 @@ namespace IntegrationTests
             await _backupService.PruneSnapshotAsync(snapshotId.Value);
             var snapshotsAfterPrune = await _backupService.GetSnapshotsAsync();
             Assert.AreEqual(0, snapshotsAfterPrune.Count, "Pruning functionality broken");
-
-            // Assert - All basic operations completed successfully
-            Assert.IsTrue(true, "All README workflow steps completed successfully");
         }
         #endregion
 
@@ -777,9 +752,6 @@ namespace IntegrationTests
         [TestMethod]
         public async Task Integration_WhenDuplicateSnapshotFileConstraint_EnforcesUniqueness()
         {
-            // Test that SQLite properly enforces the unique constraint on (SnapshotId, RelativePath)
-            // that the in-memory provider ignores
-
             // Arrange - Create a test file first to ensure snapshot creation works
             await File.WriteAllTextAsync(Path.Combine(_sourceDirectory, "test.txt"), "Test content");
 

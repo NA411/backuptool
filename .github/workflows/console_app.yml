@@ -53,6 +53,10 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore ${{ env.Solution_Name }}
 
+    #Build testable executable
+    - name: Build for test
+      run: dotnet build ${{ env.Solution_Name }}
+
     # Execute all unit tests in the solution
     - name: Execute unit tests
       run: dotnet test ${{ env.Test_Project_Path }} --configuration ${{ matrix.configuration }} --no-restore --verbosity normal

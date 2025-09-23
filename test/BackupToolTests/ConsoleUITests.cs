@@ -30,22 +30,17 @@ namespace ConsoleUITests
             _databasePath = Path.Combine(_testRootDirectory, "backup.db");
 
             // Find the backup tool executable
-            // Assumes the test is running from the test project directory
             var currentDirectory = Directory.GetCurrentDirectory();
             var solutionRoot = FindSolutionRoot(currentDirectory);
             _backupToolPath = Path.Combine(solutionRoot, "src", "backuptool.console", "bin", "Debug", "net8.0", "backuptool.exe");
 
             // If .exe doesn't exist, try without extension (for Linux/Mac)
             if (!File.Exists(_backupToolPath))
-            {
                 _backupToolPath = Path.Combine(solutionRoot, "src", "backuptool.console", "bin", "Debug", "net8.0", "backuptool");
-            }
 
             // If still not found, build the project
             if (!File.Exists(_backupToolPath))
-            {
                 BuildProject(solutionRoot);
-            }
 
             Assert.IsTrue(File.Exists(_backupToolPath), $"Backup tool executable not found at: {_backupToolPath}");
         }
@@ -54,9 +49,7 @@ namespace ConsoleUITests
         public void Cleanup()
         {
             if (Directory.Exists(_testRootDirectory))
-            {
                 Directory.Delete(_testRootDirectory, true);
-            }
         }
 
         #region Snapshot Command Tests
@@ -89,8 +82,7 @@ namespace ConsoleUITests
             // Assert
             Assert.AreEqual(0, result.ExitCode, "Snapshot command with verbose flag failed");
             Assert.IsTrue(result.Output.Contains("Creating snapshot"), "Verbose output not found");
-            Assert.IsTrue(result.Output.Contains("Files:") && result.Output.Contains("Bytes:"),
-                "File and byte statistics not found in verbose output");
+            Assert.IsTrue(result.Output.Contains("Files:") && result.Output.Contains("Bytes:"),"File and byte statistics not found in verbose output");
         }
 
         [TestMethod]
@@ -130,8 +122,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, "List command should succeed even with no snapshots");
-            Assert.IsTrue(result.Output.Contains("SNAPSHOT") && result.Output.Contains("TIMESTAMP"),
-                "List header not found");
+            Assert.IsTrue(result.Output.Contains("SNAPSHOT") && result.Output.Contains("TIMESTAMP"), "List header not found");
         }
 
         [TestMethod]
@@ -146,8 +137,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, "List command failed");
-            Assert.IsTrue(result.Output.Contains("SNAPSHOT") && result.Output.Contains("TIMESTAMP"),
-                "List header not found");
+            Assert.IsTrue(result.Output.Contains("SNAPSHOT") && result.Output.Contains("TIMESTAMP"), "List header not found");
             Assert.IsTrue(result.Output.Contains('1'), "Snapshot ID not found in list");
             Assert.IsTrue(result.Output.Contains("total"), "Total summary not found");
         }
@@ -188,8 +178,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, $"Restore command failed. Output: {result.Output}, Error: {result.Error}");
-            Assert.IsTrue(result.Output.Contains("Restore completed successfully"),
-                "Success message not found");
+            Assert.IsTrue(result.Output.Contains("Restore completed successfully"), "Success message not found");
 
             // Verify files were restored
             Assert.IsTrue(File.Exists(Path.Combine(_restoreDirectory, "test1.txt")), "test1.txt not restored");
@@ -263,8 +252,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, $"Prune command failed. Output: {result.Output}, Error: {result.Error}");
-            Assert.IsTrue(result.Output.Contains("Prune completed successfully"),
-                "Success message not found");
+            Assert.IsTrue(result.Output.Contains("Prune completed successfully"), "Success message not found");
 
             // Verify snapshot was removed
             var listAfter = await RunBackupToolAsync("list");
@@ -369,9 +357,7 @@ namespace ConsoleUITests
             var result = await RunBackupToolAsync("--version");
 
             // Assert
-            // Note: Depending on how version is implemented, this might need adjustment
-            Assert.IsTrue(result.ExitCode == 0 || result.Output.Contains("version") || result.Error.Contains("version"),
-                "Version information not found");
+            Assert.IsTrue(result.ExitCode == 0 || result.Output.Contains("version") || result.Error.Contains("version"),"Version information not found");
         }
 
         #endregion
@@ -465,7 +451,7 @@ namespace ConsoleUITests
             {
                 FileName = _backupToolPath,
                 Arguments = arguments,
-                WorkingDirectory = _testRootDirectory, // Set working directory for database creation
+                WorkingDirectory = _testRootDirectory,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -503,9 +489,7 @@ namespace ConsoleUITests
             while (current != null)
             {
                 if (current.GetFiles("*.sln").Length > 0)
-                {
                     return current.FullName;
-                }
                 current = current.Parent;
             }
             throw new InvalidOperationException("Solution root not found");
@@ -516,7 +500,7 @@ namespace ConsoleUITests
             var buildProcess = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = "build BackupTool.sln",
+                Arguments = "build",
                 WorkingDirectory = solutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
