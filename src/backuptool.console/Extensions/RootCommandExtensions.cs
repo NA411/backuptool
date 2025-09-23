@@ -128,14 +128,8 @@ namespace BackupTool.Extensions
                 if (snapshot.Files == null)
                     continue;
 
-                // SIZE: total size of files in this snapshot
-                long snapshotSize = snapshot.Files
-                    .Sum(f => f.Content?.Size ?? 0);
-
-                // DISTINCT_SIZE: sum of sizes of files whose ContentHash only appears in this snapshot
-                long distinctSize = snapshot.Files
-                    .Where(f => contentHashToFiles[f.ContentHash].Count == 1)
-                    .Sum(f => f.Content?.Size ?? 0);
+                long snapshotSize = snapshot.Files.Sum(f => f.Content?.Size ?? 0); // SIZE: total size of files in this snapshot                
+                long distinctSize = snapshot.Files.Where(f => contentHashToFiles[f.ContentHash].Count == 1).Sum(f => f.Content?.Size ?? 0); // DISTINCT_SIZE: sum of sizes of files whose ContentHash only appears in this snapshot
 
                 totalSize += snapshotSize;
 

@@ -21,10 +21,7 @@ namespace BackupTool.Repositories
 
         public async Task DeleteBySnapshotIdAsync(int snapshotId)
         {
-            var snapshotFiles = await _context.SnapshotFiles
-                .Where(sf => sf.SnapshotId == snapshotId)
-                .ToListAsync();
-
+            var snapshotFiles = await _context.SnapshotFiles.Where(sf => sf.SnapshotId == snapshotId).ToListAsync();
             _context.SnapshotFiles.RemoveRange(snapshotFiles);
             await _context.SaveChangesAsync();
         }

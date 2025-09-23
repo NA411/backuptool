@@ -12,36 +12,45 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenValidDirectoryWithFiles_ReturnsSnapshotId()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "BackupTest", Guid.NewGuid().ToString());
+            Directory.CreateDirectory(sourceDir);
             const int expectedSnapshotId = 42;
-            const string filePath = @"C:\TestDir\file1.txt";
+            var filePath = Path.Combine(sourceDir, "file1.txt");
             var fileData = new byte[] { 1, 2, 3, 4, 5 };
 
-            _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
-            _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([filePath]);
-            _fileSystem.Setup(x => x.GetDirectories(sourceDir)).Returns([]);
-            _fileSystem.Setup(x => x.ReadFileAsync(filePath)).ReturnsAsync(fileData);
-            _hashService.Setup(x => x.CalculateHash(fileData)).Returns("hash123");
-            _fileContentRepository.Setup(x => x.ExistsAsync("hash123")).ReturnsAsync(false);
-            _fileContentRepository.Setup(x => x.CreateAsync(It.IsAny<FileContent>())).ReturnsAsync((FileContent fc) => fc);
-            _snapshotFileRepository.Setup(x => x.CreateAsync(It.IsAny<SnapshotFile>())).ReturnsAsync((SnapshotFile sf) => sf);
-            _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>())).Callback<Snapshot>(s => s.Id = expectedSnapshotId).ReturnsAsync((Snapshot s) => s);
+            try
+            {
+                _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
+                _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([filePath]);
+                _fileSystem.Setup(x => x.GetDirectories(sourceDir)).Returns([]);
+                _fileSystem.Setup(x => x.ReadFileAsync(filePath)).ReturnsAsync(fileData);
+                _hashService.Setup(x => x.CalculateHash(fileData)).Returns("hash123");
+                _fileContentRepository.Setup(x => x.ExistsAsync("hash123")).ReturnsAsync(false);
+                _fileContentRepository.Setup(x => x.CreateAsync(It.IsAny<FileContent>())).ReturnsAsync((FileContent fc) => fc);
+                _snapshotFileRepository.Setup(x => x.CreateAsync(It.IsAny<SnapshotFile>())).ReturnsAsync((SnapshotFile sf) => sf);
+                _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>())).Callback<Snapshot>(s => s.Id = expectedSnapshotId).ReturnsAsync((Snapshot s) => s);
 
-            // Act
-            var result = await _service.CreateSnapshotAsync(sourceDir);
+                // Act
+                var result = await _service.CreateSnapshotAsync(sourceDir);
 
-            // Assert
-            Assert.AreEqual(expectedSnapshotId, result);
-            _unitOfWork.Verify(x => x.BeginTransactionAsync(), Times.Once);
-            _unitOfWork.Verify(x => x.CommitTransactionAsync(), Times.Once);
-            _unitOfWork.Verify(x => x.RollbackTransactionAsync(), Times.Never);
+                // Assert
+                Assert.AreEqual(expectedSnapshotId, result);
+                _unitOfWork.Verify(x => x.BeginTransactionAsync(), Times.Once);
+                _unitOfWork.Verify(x => x.CommitTransactionAsync(), Times.Once);
+                _unitOfWork.Verify(x => x.RollbackTransactionAsync(), Times.Never);
+            }
+            finally
+            {
+                if (Directory.Exists(sourceDir))
+                    Directory.Delete(sourceDir, true);
+            }
         }
 
         [TestMethod]
         public async Task CreateSnapshotAsync_WhenValidEmptyDirectory_ReturnsSnapshotId()
         {
             // Arrange
-            const string sourceDir = @"C:\EmptyDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "EmptyDir", Guid.NewGuid().ToString());
             const int expectedSnapshotId = 1;
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
@@ -63,7 +72,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenDirectoryDoesNotExist_ReturnsNull()
         {
             // Arrange
-            const string sourceDir = @"C:\NonExistentDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "NonExistentDir", Guid.NewGuid().ToString());
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(false);
 
             // Act
@@ -90,7 +99,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenSnapshotCreationFails_ReturnsNullAndRollsBack()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _unitOfWork.Setup(x => x.Snapshots.CreateAsync(It.IsAny<Snapshot>())).ThrowsAsync(new Exception("Test exception"));
@@ -109,8 +118,8 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenFileProcessingFails_ReturnsNullAndRollsBack()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string filePath = @"C:\TestDir\file1.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var filePath = Path.Combine(sourceDir, "file1.txt");
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([filePath]);
@@ -132,7 +141,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenCommitTransactionFails_ReturnsNullAndRollsBack()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([]);
             _fileSystem.Setup(x => x.GetDirectories(sourceDir)).Returns([]);
@@ -153,10 +162,10 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenDirectoryWithNestedStructure_ProcessesRecursively()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string subDir = @"C:\TestDir\SubDir";
-            const string rootFile = @"C:\TestDir\root.txt";
-            const string subFile = @"C:\TestDir\SubDir\sub.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var subDir = Path.Combine(sourceDir, "SubDir");
+            var rootFile = Path.Combine(sourceDir, "root.txt");
+            var subFile = Path.Combine(subDir, "sub.txt");
             const int expectedSnapshotId = 1;
             var rootFileData = new byte[] { 1, 2 };
             var subFileData = new byte[] { 3, 4, 5 };
@@ -191,12 +200,12 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenLargeNumberOfFiles_ProcessesAllFiles()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
             const int expectedSnapshotId = 1;
             var files = new List<string>();
 
             for (int i = 1; i <= 100; i++) // Create 100 files
-                files.Add($@"C:\TestDir\file{i}.txt");
+                files.Add(Path.Combine(sourceDir,$"file{i}.txt"));
 
             var fileData = new byte[] { 1, 2, 3 };
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
@@ -231,9 +240,9 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenDuplicateFileContent_CreatesContentOnce()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string file1 = @"C:\TestDir\file1.txt";
-            const string file2 = @"C:\TestDir\file2.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var file1 = Path.Combine(sourceDir, "file1.txt");
+            var file2 = Path.Combine(sourceDir, "file2.txt");
             const int expectedSnapshotId = 1;
             var identicalData = new byte[] { 1, 2, 3, 4, 5 };
             const string sharedHash = "sharedHash";
@@ -267,8 +276,8 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenSuccessful_LogsStartAndCompletionWithStats()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string filePath = @"C:\TestDir\file1.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var filePath = Path.Combine(sourceDir, "file1.txt");
             const int expectedSnapshotId = 42;
             var fileData = new byte[] { 1, 2, 3, 4, 5 };
 
@@ -313,7 +322,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenExceptionOccurs_LogsError()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
             var exception = new InvalidOperationException("Test exception");
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
@@ -340,7 +349,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenSnapshotCreated_SetsCorrectProperties()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
             Snapshot? capturedSnapshot = null;
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
@@ -366,7 +375,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenDebugLoggingEnabled_LogsSnapshotCreation()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Returns([]);
@@ -391,7 +400,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenEmptyDirectory_LogsZeroStats()
         {
             // Arrange
-            const string sourceDir = @"C:\EmptyDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "EmptyDir", Guid.NewGuid().ToString());
             const int expectedSnapshotId = 1;
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
@@ -422,12 +431,12 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenMixedFileAndDirectoryStructure_ProcessesCorrectly()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string subDir1 = @"C:\TestDir\SubDir1";
-            const string subDir2 = @"C:\TestDir\SubDir2";
-            const string rootFile = @"C:\TestDir\root.txt";
-            const string subFile1 = @"C:\TestDir\SubDir1\sub1.txt";
-            const string subFile2 = @"C:\TestDir\SubDir2\sub2.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var subDir1 = Path.Combine(sourceDir, "SubDir1");
+            var subDir2 = Path.Combine(sourceDir, "SubDir2");
+            var rootFile = Path.Combine(sourceDir, "root.txt");
+            var subFile1 = Path.Combine(subDir1, "sub1.txt");
+            var subFile2 = Path.Combine(subDir2, "sub2.txt");
             const int expectedSnapshotId = 1;
             var fileData = new byte[] { 1, 2, 3 };
 
@@ -472,8 +481,8 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenSpecialCharactersInPath_HandlesCorrectly()
         {
             // Arrange
-            const string sourceDir = @"C:\Test Dir with spaces & symbols!";
-            const string filePath = @"C:\Test Dir with spaces & symbols!\file with spaces.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "Test Dir with spaces & symbols!", Guid.NewGuid().ToString());
+            var filePath = Path.Combine(sourceDir, "file with spaces.txt");
             const int expectedSnapshotId = 1;
             var fileData = new byte[] { 1, 2, 3 };
 
@@ -501,8 +510,8 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenEmptyFilesExist_ProcessesEmptyFiles()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string emptyFilePath = @"C:\TestDir\empty.txt";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var emptyFilePath = Path.Combine(sourceDir, "empty.txt");
             const int expectedSnapshotId = 1;
             var emptyFileData = Array.Empty<byte>();
 
@@ -543,7 +552,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenTransactionBeginFails_ReturnsNullWithoutRollback()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _unitOfWork.Setup(x => x.BeginTransactionAsync()).ThrowsAsync(new InvalidOperationException("Cannot begin transaction"));
@@ -562,8 +571,8 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenVeryLargeFile_ProcessesCorrectly()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
-            const string largeFilePath = @"C:\TestDir\large.bin";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
+            var largeFilePath = Path.Combine(sourceDir, "large.bin");
             const int expectedSnapshotId = 1;
             var largeFileData = new byte[10 * 1024 * 1024]; // 10MB file
             Array.Fill(largeFileData, (byte)0xAB);
@@ -620,7 +629,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenProcessDirectoryThrows_RollsBackAndReturnsNull()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
 
             _fileSystem.Setup(x => x.DirectoryExists(sourceDir)).Returns(true);
             _fileSystem.Setup(x => x.GetFiles(sourceDir, It.IsAny<string>())).Throws(new UnauthorizedAccessException("Access denied"));
@@ -640,7 +649,7 @@ namespace BackupServiceTests
         public async Task CreateSnapshotAsync_WhenSnapshotHasUtcTimestamp_CreatesWithCorrectTime()
         {
             // Arrange
-            const string sourceDir = @"C:\TestDir";
+            var sourceDir = Path.Combine(Path.GetTempPath(), "TestDir", Guid.NewGuid().ToString());
             var beforeTime = DateTime.UtcNow;
             Snapshot? capturedSnapshot = null;
 

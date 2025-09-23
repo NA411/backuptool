@@ -60,10 +60,20 @@ namespace RepositoryTests
         [TestMethod]
         public async Task CreateAsync_WhenSourceDirectoryWithSpecialCharacters_SavesCorrectly()
         {
-            // Arrange
+            // Arrange - Use platform-appropriate path
+            string testPath;
+            if (OperatingSystem.IsWindows())
+            {
+                testPath = @"C:\Test Directory with spaces & symbols!";
+            }
+            else
+            {
+                testPath = "/tmp/Test Directory with spaces & symbols!";
+            }
+
             var snapshot = new Snapshot
             {
-                SourceDirectory = @"C:\Test Directory with spaces & symbols!",
+                SourceDirectory = testPath,
                 CreatedAt = DateTime.UtcNow,
                 Files = []
             };
@@ -73,13 +83,19 @@ namespace RepositoryTests
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.AreEqual(@"C:\Test Directory with spaces & symbols!", result.SourceDirectory);
+            Assert.AreEqual(testPath, result.SourceDirectory);
         }
 
         [TestMethod]
         public async Task CreateAsync_WhenUNCPath_SavesCorrectly()
         {
-            // Arrange
+            // Arrange - Only test UNC paths on Windows
+            if (!OperatingSystem.IsWindows())
+            {
+                Assert.Inconclusive("UNC paths are Windows-specific");
+                return;
+            }
+
             var snapshot = new Snapshot
             {
                 SourceDirectory = @"\\server\share\backup",

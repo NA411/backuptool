@@ -68,7 +68,7 @@ namespace RepositoryTests
             {
                 SnapshotId = 1,
                 ContentHash = "nestedHash",
-                RelativePath = @"folder\subfolder\deep\file.txt",
+                RelativePath = Path.Combine("folder", "subfolder", "deep", "file.txt"),
                 FileName = "file.txt"
             };
 
@@ -77,7 +77,7 @@ namespace RepositoryTests
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.AreEqual(@"folder\subfolder\deep\file.txt", result.RelativePath);
+            Assert.AreEqual(Path.Combine("folder", "subfolder", "deep", "file.txt"), result.RelativePath);
             Assert.AreEqual("file.txt", result.FileName);
         }
 
@@ -89,7 +89,7 @@ namespace RepositoryTests
             {
                 SnapshotId = 1,
                 ContentHash = "specialHash",
-                RelativePath = @"folder with spaces\file & symbols!.txt",
+                RelativePath = Path.Combine("folder with spaces", "file & symbols!.txt"),
                 FileName = "file & symbols!.txt"
             };
 
@@ -98,7 +98,7 @@ namespace RepositoryTests
 
             // Assert
             Assert.IsNotNull(result);
-            Assert.AreEqual(@"folder with spaces\file & symbols!.txt", result.RelativePath);
+            Assert.AreEqual(Path.Combine("folder with spaces", "file & symbols!.txt"), result.RelativePath);
             Assert.AreEqual("file & symbols!.txt", result.FileName);
         }
 

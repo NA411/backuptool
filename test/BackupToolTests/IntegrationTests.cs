@@ -107,15 +107,15 @@ namespace IntegrationTests
         [TestMethod]
         public async Task Integration_WhenSnapshotWithNestedDirectories_AllFilesAreRestoredWithCorrectStructure()
         {
-            // Arrange - Create nested directory structure
+            // Arrange - Create nested directory structure using Path.Combine
             var nestedFiles = new Dictionary<string, byte[]>
             {
                 ["root.txt"] = Encoding.UTF8.GetBytes("Root level file"),
-                [@"folder1\file1.txt"] = Encoding.UTF8.GetBytes("File in folder1"),
-                [@"folder1\subfolder\deep.txt"] = Encoding.UTF8.GetBytes("Deep nested file"),
-                [@"folder2\file2.bin"] = [0xAA, 0xBB, 0xCC, 0xDD],
-                [@"folder2\subfolder\another.txt"] = Encoding.UTF8.GetBytes("Another nested file"),
-                [@"empty_folder\will_exist.txt"] = Encoding.UTF8.GetBytes("File in otherwise empty folder")
+                [Path.Combine("folder1", "file1.txt")] = Encoding.UTF8.GetBytes("File in folder1"),
+                [Path.Combine("folder1", "subfolder", "deep.txt")] = Encoding.UTF8.GetBytes("Deep nested file"),
+                [Path.Combine("folder2", "file2.bin")] = [0xAA, 0xBB, 0xCC, 0xDD],
+                [Path.Combine("folder2", "subfolder", "another.txt")] = Encoding.UTF8.GetBytes("Another nested file"),
+                [Path.Combine("empty_folder", "will_exist.txt")] = Encoding.UTF8.GetBytes("File in otherwise empty folder")
             };
 
             foreach (var file in nestedFiles)
@@ -718,9 +718,14 @@ namespace IntegrationTests
                 // Use Path.Combine to ensure proper path separators
                 [Path.Combine("folder1", "file1.txt")] = "File in folder1",
                 [Path.Combine("folder2", "subfolder", "file2.txt")] = "File in nested folder",
-                [Path.Combine("folder3", "file with spaces.txt")] = "File with spaces in name",
-                [Path.Combine("unicode", "测试文件.txt")] = "Unicode filename test"
+                [Path.Combine("folder3", "file with spaces.txt")] = "File with spaces in name"
             };
+
+            // Only test Unicode filenames on platforms that support them
+            if (!OperatingSystem.IsWindows() || Environment.OSVersion.Version.Major >= 10)
+            {
+                testFiles[Path.Combine("unicode", "测试文件.txt")] = "Unicode filename test";
+            }
 
             foreach (var file in testFiles)
             {

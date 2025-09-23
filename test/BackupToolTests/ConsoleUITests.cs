@@ -32,13 +32,21 @@ namespace ConsoleUITests
             // Find the backup tool executable
             var currentDirectory = Directory.GetCurrentDirectory();
             var solutionRoot = FindSolutionRoot(currentDirectory);
-            _backupToolPath = Path.Combine(solutionRoot, "src", "backuptool.console", "bin", "Debug", "net8.0", "backuptool.exe");
 
-            // If .exe doesn't exist, try without extension (for Linux/Mac)
-            if (!File.Exists(_backupToolPath))
-                _backupToolPath = Path.Combine(solutionRoot, "src", "backuptool.console", "bin", "Debug", "net8.0", "backuptool");
+            // Platform-specific executable name
+            string executableName;
+            if (OperatingSystem.IsWindows())
+            {
+                executableName = "backuptool.exe";
+            }
+            else
+            {
+                executableName = "backuptool";
+            }
 
-            // If still not found, build the project
+            _backupToolPath = Path.Combine(solutionRoot, "src", "backuptool.console", "bin", "Debug", "net8.0", executableName);
+
+            // If not found, build the project
             if (!File.Exists(_backupToolPath))
                 BuildProject(solutionRoot);
 
