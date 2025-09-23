@@ -25,7 +25,7 @@ BackupTool uses a sophisticated storage architecture:
 - **Referential integrity** with cascading deletes ensures data consistency
 - **Transaction support** protects against data corruption during operations
 
-## Prerequisites
+## Prerequisites (Only for Build)
 
 - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) (for building from source)
 - [Git](https://git-scm.com/) (for cloning the repository)
@@ -247,18 +247,6 @@ The project uses GitHub Actions for:
 - **Test execution** across multiple platforms
 - **Self-contained executable creation** with no runtime dependencies
 - **Automatic releases** when version tags are pushed
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
-
-For bug reports and feature requests, please open an issue on [GitHub](https://github.com/NA411/backuptool/issues).
 
 ## Architecture Notes
 
