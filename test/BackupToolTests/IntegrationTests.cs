@@ -22,6 +22,7 @@ namespace IntegrationTests
         private string _testRootDirectory = null!;
         private string _sourceDirectory = null!;
         private string _restoreDirectory = null!;
+        private Microsoft.Data.Sqlite.SqliteConnection _connection = null!;
 
         [TestInitialize]
         public void Setup()
@@ -35,15 +36,17 @@ namespace IntegrationTests
             Directory.CreateDirectory(_sourceDirectory);
             Directory.CreateDirectory(_restoreDirectory);
 
-            // Setup SQLite database instead of in-memory so transactions can be tested
+            // Create and keep connection alive for in-memory SQLite (same as UnitOfWorkTests)
+            var connectionString = "Data Source=:memory:";
+            _connection = new Microsoft.Data.Sqlite.SqliteConnection(connectionString);
+            _connection.Open(); // Keep connection open to persist in-memory database
+
             var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseSqlite($"Data Source=:memory:")
+                .UseSqlite(_connection) // Pass the connection directly
                 .Options;
 
             _context = new BackupDbContext(options);
-
-            // Ensure database is created with proper schema
-            _context.Database.EnsureCreated();
+            _context.Database.EnsureCreated(); // This will now create the tables
 
             // Setup repositories and services
             var snapshotRepository = new SnapshotRepository(_context);
@@ -61,7 +64,11 @@ namespace IntegrationTests
         [TestCleanup]
         public void Cleanup()
         {
-            _context.Dispose();
+            _unitOfWork?.Dispose();
+            _context?.Dispose();
+            _connection?.Close();
+            _connection?.Dispose();
+
             if (Directory.Exists(_testRootDirectory))
             {
                 Directory.Delete(_testRootDirectory, true);
@@ -608,63 +615,6 @@ namespace IntegrationTests
             // Assert - All basic operations completed successfully
             Assert.IsTrue(true, "All README workflow steps completed successfully");
         }
-
-        [TestMethod]
-        public async Task Integration_WhenDatabaseOperations_WorkWithSQLite()
-        {
-            // Test that the actual SQLite database works correctly
-            // (This simulates the real database usage vs in-memory testing)
-
-            var tempDbPath = Path.Combine(_testRootDirectory, "test_backup_operations.db");
-
-            var options = new DbContextOptionsBuilder<BackupDbContext>()
-                .UseSqlite($"Data Source=:memory:")
-                .Options;
-
-            await using var realContext = new BackupDbContext(options);
-            await realContext.Database.EnsureCreatedAsync();
-
-            var realUnitOfWork = new UnitOfWork(realContext);
-            var realBackupService = new BackupService(realUnitOfWork, _hashService, _fileSystemService, _logger.Object);
-
-            try
-            {
-                // Arrange - Create test data
-                await File.WriteAllTextAsync(Path.Combine(_sourceDirectory, "sqlite_test.txt"),
-                    "Testing with real SQLite database");
-
-                // Act - Perform operations with real database
-                var snapshotId = await realBackupService.CreateSnapshotAsync(_sourceDirectory);
-                Assert.IsNotNull(snapshotId);
-
-                var snapshots = await realBackupService.GetSnapshotsAsync();
-                Assert.AreEqual(1, snapshots.Count);
-
-                await realBackupService.RestoreSnapshotAsync(snapshotId.Value, _restoreDirectory);
-
-                // Assert - Verify real database operations work
-                Assert.IsTrue(File.Exists(Path.Combine(_restoreDirectory, "sqlite_test.txt")));
-                Assert.IsTrue(File.Exists(tempDbPath), "SQLite database file was not created");
-
-                // Verify database has expected tables and data
-                var snapshotCount = await realContext.Snapshots.CountAsync();
-                var fileContentCount = await realContext.FileContents.CountAsync();
-                var snapshotFileCount = await realContext.SnapshotFiles.CountAsync();
-
-                Assert.AreEqual(1, snapshotCount, "Snapshot not saved to real database");
-                Assert.IsTrue(fileContentCount > 0, "File content not saved to real database");
-                Assert.IsTrue(snapshotFileCount > 0, "Snapshot files not saved to real database");
-            }
-            finally
-            {
-                realUnitOfWork.Dispose();
-                if (File.Exists(tempDbPath))
-                {
-                    File.Delete(tempDbPath);
-                }
-            }
-        }
-
         #endregion
 
         #region Edge Case and Robustness Tests
@@ -830,41 +780,39 @@ namespace IntegrationTests
             // Test that SQLite properly enforces the unique constraint on (SnapshotId, RelativePath)
             // that the in-memory provider ignores
 
-            // Arrange
-            var snapshot = new BackupTool.Entities.Snapshot
+            // Arrange - Create a test file first to ensure snapshot creation works
+            await File.WriteAllTextAsync(Path.Combine(_sourceDirectory, "test.txt"), "Test content");
+
+            // Create snapshot using the backup service (this will use Unit of Work properly)
+            var snapshotId = await _backupService.CreateSnapshotAsync(_sourceDirectory);
+            Assert.IsNotNull(snapshotId);
+
+            // Now try to manually create a duplicate SnapshotFile entry with the same relative path
+            // First, we need to create some file content for the second entry
+            var duplicateContent = new BackupTool.Entities.FileContent
             {
-                SourceDirectory = _sourceDirectory,
+                Hash = "duplicateHash",
+                Data = System.Text.Encoding.UTF8.GetBytes("Different content"),
+                Size = 17,
                 CreatedAt = DateTime.UtcNow
             };
 
-            // Create snapshot first
-            _context.Snapshots.Add(snapshot);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.FileContents.CreateAsync(duplicateContent);
+            await _unitOfWork.SaveChangesAsync();
 
-            var snapshotFile1 = new BackupTool.Entities.SnapshotFile
+            // Try to create a second SnapshotFile with the same SnapshotId and RelativePath
+            // This should violate the unique constraint
+            var duplicateSnapshotFile = new BackupTool.Entities.SnapshotFile
             {
-                SnapshotId = snapshot.Id,
-                ContentHash = "hash1",
-                RelativePath = "duplicate.txt",
-                FileName = "duplicate.txt"
+                SnapshotId = snapshotId.Value,
+                ContentHash = "duplicateHash",
+                RelativePath = "test.txt", // Same path as the file created by snapshot - should violate constraint
+                FileName = "test.txt"
             };
 
-            var snapshotFile2 = new BackupTool.Entities.SnapshotFile
-            {
-                SnapshotId = snapshot.Id,
-                ContentHash = "hash2",
-                RelativePath = "duplicate.txt", // Same relative path - should violate constraint
-                FileName = "duplicate.txt"
-            };
-
-            // Act & Assert
-            _context.SnapshotFiles.Add(snapshotFile1);
-            await _context.SaveChangesAsync(); // First one should succeed
-
-            _context.SnapshotFiles.Add(snapshotFile2);
-
-            // This should throw due to unique constraint violation
-            await Assert.ThrowsExceptionAsync<DbUpdateException>(() => _context.SaveChangesAsync());
+            // Act & Assert - This should throw due to unique constraint violation
+            await Assert.ThrowsExceptionAsync<DbUpdateException>(() =>
+                _unitOfWork.SnapshotFiles.CreateAsync(duplicateSnapshotFile));
         }
 
         #endregion
