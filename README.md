@@ -138,8 +138,8 @@ backuptool snapshot --target-directory /path/to/backup --verbose
 |-----------|-------------------------------------------------------|-------------|
 | `snapshot`| Create a new snapshot of a directory                 | `--target-directory`, `--verbose` |
 | `list`    | List all snapshots with storage usage statistics     | `--verbose` |
-| `restore` | Restore a snapshot to a directory                     | `--snapshot-number`, `--output-directory`, `--create-directory` |
-| `prune`   | Remove a snapshot and reclaim orphaned storage       | `--snapshot` |
+| `restore` | Restore a snapshot to a directory                     | `--snapshot-number`, `--output-directory`, `--create-directory`, `--verbose` |
+| `prune`   | Remove a snapshot and reclaim orphaned storage       | `--snapshot`, `--verbose` |
 | `check`   | Scan for corrupted or missing file content           | `--verbose` |
 
 ## Storage and De-duplication
