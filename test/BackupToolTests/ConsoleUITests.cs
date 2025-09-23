@@ -516,7 +516,7 @@ namespace ConsoleUITests
             var buildProcess = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = "build",
+                Arguments = "build BackupTool.sln",
                 WorkingDirectory = solutionRoot,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
