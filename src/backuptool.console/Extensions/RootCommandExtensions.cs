@@ -100,8 +100,7 @@ namespace BackupTool.Extensions
             var snapshots = await backupService.GetSnapshotsAsync();
             long totalSize = 0;
 
-            // Build a map of ContentHash to all SnapshotFile instances
-            var contentHashToFiles = new Dictionary<string, List<SnapshotFile>>();
+            var contentHashToFiles = new Dictionary<string, List<SnapshotFile>>(); // Build a map of ContentHash to all SnapshotFile instances
             foreach (var snapshot in snapshots)
             {
                 if (snapshot.Files == null)
@@ -118,25 +117,42 @@ namespace BackupTool.Extensions
                 }
             }
 
-            // Header
-            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE");
-            Console.WriteLine("--------  -------------------  ----- -------------");
+            var contentHashToSnapshot = contentHashToFiles.ToDictionary(h => h.Key, h => h.Value.OrderBy(f => f.SnapshotId).Select(s => s.SnapshotId).FirstOrDefault());
 
-            // Print info for each snapshot
+            Console.WriteLine("SNAPSHOT  TIMESTAMP            SIZE  DISTINCT_SIZE  DIRECTORY");
+            Console.WriteLine("--------  -------------------  ----- -------------  ---------");
+
             foreach (var snapshot in snapshots)
             {
                 if (snapshot.Files == null)
                     continue;
 
-                long snapshotSize = snapshot.Files.Sum(f => f.Content?.Size ?? 0); // SIZE: total size of files in this snapshot                
-                long distinctSize = snapshot.Files.Where(f => contentHashToFiles[f.ContentHash].Count == 1).Sum(f => f.Content?.Size ?? 0); // DISTINCT_SIZE: sum of sizes of files whose ContentHash only appears in this snapshot
+                long snapshotSize = snapshot.Files.Sum(f => f.Content?.Size ?? 0); // SIZE: total size of files in this snapshot
+                var distinctSize = contentHashToFiles.Where(h => contentHashToSnapshot.Where(h => h.Value == snapshot.Id).Select(s => s.Key).Contains(h.Key)).SelectMany(f => f.Value).DistinctBy(f => f.ContentHash).Sum(f => f.Content?.Size);
 
                 totalSize += snapshotSize;
 
-                Console.WriteLine($"{snapshot.Id,-8}  {snapshot.CreatedAt:yyyy-MM-dd HH:mm:ss}  {snapshotSize,5} {distinctSize,13}");
+                string displayDirectory = GetLastFolderName(snapshot.SourceDirectory); // Show just the last folder name for cleaner display
+
+                Console.WriteLine($"{snapshot.Id,-8}  {snapshot.CreatedAt:yyyy-MM-dd HH:mm:ss}  {snapshotSize,5} {distinctSize,13}  {displayDirectory}");
             }
 
             Console.WriteLine($"total                          {totalSize,5}"); // Summary line
+        }
+
+        private static string GetLastFolderName(string path)
+        {
+            if (string.IsNullOrEmpty(path))
+                return string.Empty;
+
+            path = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar); // Handle root paths and normalize separators
+
+            if (string.IsNullOrEmpty(path))
+                return "/"; // Root directory case
+
+            var lastPart = Path.GetFileName(path); // Get the last part of the path
+
+            return string.IsNullOrEmpty(lastPart) ? path : lastPart; // If GetFileName returns empty (e.g., for root drives like "C:\"), return the original path
         }
 
         internal static void SetupRestoreCommand(this RootCommand rootCommand, IBackupService backupService)

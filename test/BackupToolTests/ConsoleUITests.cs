@@ -1,4 +1,3 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -71,8 +70,7 @@ namespace ConsoleUITests
 
             // Assert
             Assert.AreEqual(0, result.ExitCode, $"Snapshot command failed. Output: {result.Output}, Error: {result.Error}");
-            Assert.IsTrue(result.Output.Contains("Snapshot") && result.Output.Contains("created successfully"),
-                "Success message not found in output");
+            Assert.IsTrue(result.Output.Contains("Snapshot") && result.Output.Contains("created successfully"), "Success message not found in output");
             Assert.IsTrue(File.Exists(_databasePath), "Database file was not created");
         }
 
@@ -338,8 +336,7 @@ namespace ConsoleUITests
             var result = await RunBackupToolAsync("");
 
             // Assert
-            Assert.IsTrue(result.Output.Contains("BACKUP TOOL") || result.Output.Contains("backup tool"),
-                "Tool name not found in help");
+            Assert.IsTrue(result.Output.Contains("BACKUP TOOL") || result.Output.Contains("backup tool"), "Tool name not found in help");
             Assert.IsTrue(result.Output.Contains("snapshot") && result.Output.Contains("restore") &&
                          result.Output.Contains("list") && result.Output.Contains("prune") &&
                          result.Output.Contains("check"),

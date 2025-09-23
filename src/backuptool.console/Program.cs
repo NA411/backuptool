@@ -11,6 +11,7 @@ namespace BackupTool
     {
         static async Task<int> Main(string[] args)
         {
+            //args = new string[] { "list" };
             // Setup Command Line Functions
             const string asciiArt = @"
                 ██████╗  █████╗  ██████╗██╗  ██╗██╗   ██╗██████╗     ████████╗ ██████╗  ██████╗ ██╗     
