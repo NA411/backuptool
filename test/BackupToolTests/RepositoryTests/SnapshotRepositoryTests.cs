@@ -2,7 +2,6 @@ using BackupTool.Contexts;
 using BackupTool.Entities;
 using BackupTool.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace RepositoryTests
 {

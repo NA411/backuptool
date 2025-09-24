@@ -20,7 +20,7 @@ namespace BackupTool.Services
 
         /// <summary>
         /// Creates a complete snapshot of the specified directory and all its subdirectories.
-        /// Uses content-based deduplication to store only unique file content and maintains
+        /// Uses content-based de-duplication to store only unique file content and maintains
         /// transactional integrity throughout the operation.
         /// </summary>
         /// <param name="sourceDirectory">The full path to the directory to backup</param>
@@ -121,7 +121,7 @@ namespace BackupTool.Services
 
         /// <summary>
         /// Processes a single file for inclusion in a snapshot, implementing content-based
-        /// deduplication by storing unique content only once based on SHA-256 hash.
+        /// de-duplication by storing unique content only once based on SHA-256 hash.
         /// </summary>
         /// <param name="filePath">The full path to the file to process</param>
         /// <param name="snapshotId">The ID of the snapshot being created</param>

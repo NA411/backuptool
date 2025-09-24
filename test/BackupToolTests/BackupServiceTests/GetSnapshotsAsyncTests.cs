@@ -1,6 +1,5 @@
 using BackupTool.Entities;
 using BackupToolTests;
-using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace BackupServiceTests;

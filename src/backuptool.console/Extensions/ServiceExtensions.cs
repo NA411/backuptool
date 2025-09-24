@@ -8,8 +8,18 @@ using Microsoft.Extensions.Logging;
 
 namespace BackupTool.Extensions
 {
+    /// <summary>
+    /// Extension methods for configuring dependency injection services for the backup tool application.
+    /// Provides a centralized configuration point for all application services, repositories, and
+    /// infrastructure components with support for different logging configurations.
+    /// </summary>
     public static class ServiceExtensions
     {
+        /// <summary>
+        /// Configures and registers all backup tool services with the dependency injection container.
+        /// Sets up the complete service dependency graph including database context, repositories,
+        /// domain services, and logging infrastructure.
+        /// </summary>
         public static IServiceCollection AddBackupServices(this IServiceCollection services, string connectionString, bool isVerbose)
         {
             // Database

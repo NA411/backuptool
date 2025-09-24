@@ -1,7 +1,5 @@
 using BackupTool.Entities;
-using BackupTool.Services;
 using BackupToolTests;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
 
 namespace BackupServiceTests

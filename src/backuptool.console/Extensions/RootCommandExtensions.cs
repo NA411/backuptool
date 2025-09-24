@@ -135,7 +135,7 @@ namespace BackupTool.Extensions
         /// Configures the 'list' command for displaying all snapshots with their metadata
         /// including creation timestamps, file counts, and storage usage statistics.
         /// </summary>
-        /// <param name="rootCommand">The root command to add the list subcommand to</param>
+        /// <param name="rootCommand">The root command to add the list sub-command to</param>
         /// <param name="backupService">The backup service instance for retrieving snapshot information</param>
         /// <remarks>
         internal static void SetupListCommand(this RootCommand rootCommand, IBackupService backupService)
@@ -147,7 +147,7 @@ namespace BackupTool.Extensions
 
         /// <summary>
         /// Handles execution of the list command by retrieving all snapshots and displaying
-        /// them in a formatted table with storage statistics and deduplication information.
+        /// them in a formatted table with storage statistics and de-duplication information.
         /// </summary>
         /// <param name="backupService">The backup service to use for retrieving snapshots</param>
         /// <returns>A task representing the asynchronous list operation</returns>
@@ -301,7 +301,7 @@ namespace BackupTool.Extensions
         /// Configures the 'snapshot' command for creating new backups of directories
         /// with all subdirectories and files included.
         /// </summary>
-        /// <param name="rootCommand">The root command to add the snapshot subcommand to</param>
+        /// <param name="rootCommand">The root command to add the snapshot sub-command to</param>
         /// <param name="backupService">The backup service instance for performing snapshot operations</param>
         internal static void SetupSnapshotCommand(this RootCommand rootCommand, IBackupService backupService)
         {
