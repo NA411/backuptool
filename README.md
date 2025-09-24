@@ -2,6 +2,8 @@
 
 <img width="979" height="469" alt="image" src="https://github.com/user-attachments/assets/6b2e6469-02f4-47bc-9db6-3dd3061aa6e7" />
 
+[![Build Status](https://github.com/NA411/backuptool/workflows/.NET%20Console%20App%20Build/badge.svg)](https://github.com/NA411/backuptool/actions) [![Release](https://img.shields.io/github/v/release/NA411/backuptool)](https://github.com/NA411/backuptool/releases) [![.NET](https://img.shields.io/badge/.NET-8.0-blue)](https://dotnet.microsoft.com/download/dotnet/8.0) [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)](#quick-start)
+
 BackupTool is a cross-platform, snapshot-based file backup utility written in C# for .NET 8. It efficiently stores and de-duplicates file content, supports integrity checking, and provides easy restore and pruning operations. The tool is designed for reliability and repeatability, with a focus on clear documentation and simple usage on Unix-like systems. It was built with System.CommandLine providing a robust command-line interface and Entity Framework Core to provide database support.
 
 ## Features
