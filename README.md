@@ -66,7 +66,7 @@ The pre-built releases are **self-contained executables** that include the .NET 
    dotnet build BackupTool.sln
    ```
 
-3. **Run Tests** (Optional)
+3. **Run Tests** (Optional) - Windows Only
    ```
    dotnet test BackupTool.sln
    ```
